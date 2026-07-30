@@ -1,9 +1,13 @@
 .grid {
+  position: relative;
+  outline: none;
   display: grid;
   grid-template-columns: var(--gutter-w) repeat(var(--cols), var(--col-w));
   grid-template-rows: var(--header-h);
   grid-auto-rows: var(--row-h);
   width: max-content;
+  /* only the visible rows are mounted, so the scroll extent is stated, not grown */
+  height: var(--sheet-h);
 }
 
 .grid-corner,
@@ -56,4 +60,54 @@
   justify-content: flex-end;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+.grid-selection {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  pointer-events: none;
+}
+
+.grid-editor {
+  position: absolute;
+  z-index: 4;
+  width: max-content;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-float);
+  font-family: var(--font-sans);
+  font-size: var(--text-cell);
+}
+
+.grid-editor.is-monospaced {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid-editor-mirror {
+  display: block;
+  visibility: hidden;
+  /* the trailing room is the caret's, so it never sits on the border */
+  padding: 0 14px 0 10px;
+  white-space: pre;
+  font: inherit;
+  font-variant-numeric: inherit;
+}
+
+.grid-editor-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0 10px;
+  border: none;
+  border-radius: inherit;
+  background: none;
+  outline: none;
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: inherit;
 }

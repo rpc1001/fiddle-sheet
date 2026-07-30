@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { type CellKey, cellKey, parseAddress } from "../address";
 import type { CellValue } from "./errors";
 import { type ReadCell, evaluate } from "./evaluate";
+import { FUNCTIONS } from "./functions";
 import { parse } from "./parse";
 
 function at(address: string): CellKey {
@@ -97,5 +98,15 @@ describe("evaluate", () => {
 
   it("rejects a range with no function around it", () => {
     expect(run("A1:A5")).toMatchObject({ code: "not-a-number" });
+  });
+
+  // the list the editor suggests from is written by hand, so it has to be
+  // checked against what the evaluator will actually accept
+  it("knows every function the editor offers", () => {
+    for (const entry of FUNCTIONS) {
+      expect(run(`${entry.name}(A1:A2)`, { A1: 1, A2: 3 })).not.toMatchObject({
+        code: "unknown-function",
+      });
+    }
   });
 });

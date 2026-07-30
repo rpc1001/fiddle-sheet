@@ -18,8 +18,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.grid-viewport {
+.app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+}
+
+.grid-viewport {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   cursor: cell;
   user-select: none;

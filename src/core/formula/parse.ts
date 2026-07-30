@@ -1,15 +1,6 @@
-import { type Address, columnIndex, parseAddress } from "../address";
-import { ROWS } from "../geometry";
-
-export type Range = { top: number; left: number; bottom: number; right: number };
-
-export function* cellsIn(range: Range): Generator<Address> {
-  for (let row = range.top; row <= range.bottom; row++) {
-    for (let col = range.left; col <= range.right; col++) {
-      yield { row, col };
-    }
-  }
-}
+import { parseAddress } from "../address";
+import type { Range } from "../range";
+import { referenceRange } from "./scan";
 
 export type Node =
   | { kind: "number"; value: number }
@@ -19,7 +10,11 @@ export type Node =
   | { kind: "binary"; op: "+" | "-" | "*" | "/"; left: Node; right: Node }
   | { kind: "call"; name: string; args: Node[] };
 
-export class ParseError extends Error {}
+// deliberately not an Error, for the same reason as Failure in evaluate.ts:
+// a half-typed formula throws on nearly every keystroke and nothing reads a stack
+export class ParseError {
+  constructor(readonly message: string) {}
+}
 
 type Punctuation = "+" | "-" | "*" | "/" | "(" | ")" | "," | ":";
 
@@ -164,22 +159,7 @@ export function parse(source: string): Node {
 }
 
 function parseRange(startText: string, endText: string): Range {
-  const start = parseAddress(startText);
-  const end = parseAddress(endText);
-  if (start && end) return normalize(start.row, start.col, end.row, end.col);
-
-  const startCol = columnIndex(startText);
-  const endCol = columnIndex(endText);
-  if (startCol !== null && endCol !== null) return normalize(0, startCol, ROWS - 1, endCol);
-
-  throw new ParseError(`bad range: ${startText}:${endText}`);
-}
-
-function normalize(row1: number, col1: number, row2: number, col2: number): Range {
-  return {
-    top: Math.min(row1, row2),
-    left: Math.min(col1, col2),
-    bottom: Math.max(row1, row2),
-    right: Math.max(col1, col2),
-  };
+  const range = referenceRange(startText, endText);
+  if (!range) throw new ParseError(`bad range: ${startText}:${endText}`);
+  return range;
 }

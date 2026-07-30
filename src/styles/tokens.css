@@ -2,10 +2,30 @@
   --ink-rgb: 20 17 13;
 
   --paper: #fffdf9;
+  --paper-lit: #ffffff;
+  --paper-veil: rgb(255 253 249 / 0.93);
+  --paper-82: rgb(255 253 249 / 0.82);
+  --paper-45: rgb(255 253 249 / 0.45);
+  --paper-12: rgb(255 253 249 / 0.12);
+  --card: #f4f1ea;
   --ink: rgb(var(--ink-rgb));
-  --ink-cell: #26221c;
+  --ink-cell: rgb(var(--ink-rgb) / 0.88);
   --ink-36: rgb(var(--ink-rgb) / 0.36);
+  --ink-72: rgb(var(--ink-rgb) / 0.72);
+  --ink-45: rgb(var(--ink-rgb) / 0.45);
+  --ink-42: rgb(var(--ink-rgb) / 0.42);
   --ink-30: rgb(var(--ink-rgb) / 0.3);
+
+  --accent-rgb: 226 89 10;
+  --accent: rgb(var(--accent-rgb));
+  --accent-tint: rgb(var(--accent-rgb) / 0.09);
+
+  /* the other direction of a dependency: cells that read the one you are on */
+  --flow-rgb: 22 104 118;
+
+  --edge: rgb(var(--ink-rgb) / 0.09);
+  --edge-soft: rgb(var(--ink-rgb) / 0.07);
+  --edge-faint: rgb(var(--ink-rgb) / 0.12);
 
   --rule-header: rgb(var(--ink-rgb) / 0.13);
   --rule-row: rgb(var(--ink-rgb) / 0.055);
@@ -14,7 +34,19 @@
   --font-sans: "Instrument Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
+  --radius-md: 7px;
+  --radius-lg: 11px;
+  --radius-pill: 999px;
+
+  --shadow-float: 0 10px 30px rgb(var(--ink-rgb) / 0.15);
+
+  --title-bar-h: 54px;
+
+  --text-hero: 30px;
+  --text-message: 15px;
   --text-cell: 13px;
+  --text-meta: 9.5px;
+  --text-hint: 11px;
   --text-label: 10px;
   --tracking-label: 0.16em;
 }

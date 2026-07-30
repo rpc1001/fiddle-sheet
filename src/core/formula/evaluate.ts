@@ -1,6 +1,7 @@
 import type { Address } from "../address";
 import { type CellError, type CellValue, type ErrorCode, isError } from "./errors";
-import { type Node, cellsIn } from "./parse";
+import { cellsIn } from "../range";
+import type { Node } from "./parse";
 
 export type ReadCell = (row: number, col: number) => CellValue;
 
@@ -42,7 +43,7 @@ function walk(node: Node, readCell: ReadCell): number {
 
     // a bare range is only meaningful as a function argument
     case "range":
-      fail("not-a-number", "a range needs a function like SUM around it");
+      fail("not-a-number", "wrap the range in SUM or AVERAGE");
   }
 }
 
@@ -70,7 +71,7 @@ function applyOperator(op: "+" | "-" | "*" | "/", left: number, right: number): 
     case "*":
       return left * right;
     case "/":
-      if (right === 0) fail("divide-by-zero", "the divisor is zero");
+      if (right === 0) fail("divide-by-zero", "dividing by zero");
       return left / right;
   }
 }

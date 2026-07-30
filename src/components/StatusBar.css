@@ -1,0 +1,76 @@
+.status-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 15px 9px 9px;
+  background: var(--paper-veil);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--edge-faint);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-float);
+  white-space: nowrap;
+  /* a readout, never a target: clicks belong to the cells underneath */
+  pointer-events: none;
+}
+
+.status-ref {
+  padding: 7px 10px;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-hint);
+  line-height: 1;
+}
+
+.status-behind {
+  min-width: 104px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-cell);
+  line-height: 1;
+}
+
+.status-behind.is-formula {
+  color: var(--accent);
+}
+
+.status-behind.is-empty {
+  color: var(--ink-30);
+}
+
+.status-divider {
+  width: 1px;
+  height: 17px;
+  background: var(--edge-faint);
+}
+
+.status-hints {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-72);
+  font-family: var(--font-sans);
+  font-size: var(--text-cell);
+  line-height: 1;
+}
+
+.status-keys {
+  padding: 5px 7px;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  color: var(--ink-72);
+  font-family: var(--font-mono);
+  font-size: var(--text-hint);
+  line-height: 1;
+}

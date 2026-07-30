@@ -14,11 +14,19 @@ export function columnIndex(label: string): number | null {
 
 export type Address = { row: number; col: number };
 
+export function addressLabel(address: Address): string {
+  return `${columnLabel(address.col)}${address.row + 1}`;
+}
+
 // one number per cell, so the store and the dependency graph can key plain maps
 export type CellKey = number;
 
 export function cellKey(row: number, col: number): CellKey {
   return row * COLS + col;
+}
+
+export function addressOf(key: CellKey): Address {
+  return { row: Math.floor(key / COLS), col: key % COLS };
 }
 
 // "B7" -> { row: 6, col: 1 }. null for anything out of the sheet's bounds.

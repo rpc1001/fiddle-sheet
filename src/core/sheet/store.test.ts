@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { type CellKey, cellKey, parseAddress } from "../address";
+import { selectionAt } from "../selection";
 import { createSheet } from "./store";
 
 function at(address: string): CellKey {
@@ -13,7 +14,10 @@ function sheetOf(cells: Record<string, string> = {}) {
   return {
     sheet,
     display: (address: string) => sheet.getDisplay(at(address)),
-    set: (address: string, raw: string) => sheet.setRaw(at(address), raw),
+    set(address: string, raw: string) {
+      const parsed = parseAddress(address)!;
+      sheet.edit([[at(address), raw]], selectionAt(parsed));
+    },
   };
 }
 
@@ -157,5 +161,182 @@ describe("store", () => {
 
   it("rounds away floating point noise", () => {
     expect(sheetOf({ A1: "=0.1+0.2" }).display("A1")).toBe("0.3");
+  });
+});
+
+describe("undo and redo", () => {
+  it("has nothing to undo on a fresh sheet", () => {
+    const { sheet } = sheetOf({ A1: "1" });
+    expect(sheet.canUndo()).toBe(false);
+    expect(sheet.canRedo()).toBe(false);
+  });
+
+  it("does not count seeding as an edit", () => {
+    const { sheet, display } = sheetOf({ A1: "1" });
+    sheet.undo();
+    expect(display("A1")).toBe("1");
+  });
+
+  it("puts back the previous text", () => {
+    const { sheet, display, set } = sheetOf({ A1: "1" });
+    set("A1", "2");
+    sheet.undo();
+    expect(display("A1")).toBe("1");
+  });
+
+  it("puts back an empty cell", () => {
+    const { sheet, display, set } = sheetOf();
+    set("A1", "typed");
+    sheet.undo();
+    expect(display("A1")).toBe("");
+  });
+
+  it("redoes what was undone", () => {
+    const { sheet, display, set } = sheetOf({ A1: "1" });
+    set("A1", "2");
+    sheet.undo();
+    sheet.redo();
+    expect(display("A1")).toBe("2");
+  });
+
+  it("walks back through several edits one at a time", () => {
+    const { sheet, display, set } = sheetOf();
+    set("A1", "one");
+    set("A1", "two");
+    set("A1", "three");
+
+    sheet.undo();
+    expect(display("A1")).toBe("two");
+    sheet.undo();
+    expect(display("A1")).toBe("one");
+    sheet.undo();
+    expect(display("A1")).toBe("");
+  });
+
+  it("treats a multi-cell edit as one action", () => {
+    const { sheet, display } = sheetOf({ A1: "1", A2: "2", A3: "3" });
+    sheet.edit(
+      [
+        [at("A1"), ""],
+        [at("A2"), ""],
+        [at("A3"), ""],
+      ],
+      selectionAt({ row: 0, col: 0 }),
+    );
+    expect(display("A1")).toBe("");
+
+    sheet.undo();
+    expect([display("A1"), display("A2"), display("A3")]).toEqual(["1", "2", "3"]);
+  });
+
+  it("recomputes dependents on undo", () => {
+    const { sheet, display, set } = sheetOf({ A1: "1", B1: "=A1*10" });
+    set("A1", "5");
+    expect(display("B1")).toBe("50");
+
+    sheet.undo();
+    expect(display("B1")).toBe("10");
+  });
+
+  it("restores a formula, not its result", () => {
+    const { sheet, display, set } = sheetOf({ A1: "2", B1: "=A1*3" });
+    set("B1", "99");
+    sheet.undo();
+    expect(sheet.getRaw(at("B1"))).toBe("=A1*3");
+    expect(display("B1")).toBe("6");
+  });
+
+  it("abandons the redo branch after a new edit", () => {
+    const { sheet, display, set } = sheetOf();
+    set("A1", "one");
+    sheet.undo();
+    set("A1", "other");
+
+    expect(sheet.canRedo()).toBe(false);
+    sheet.redo();
+    expect(display("A1")).toBe("other");
+  });
+
+  it("ignores an edit that changes nothing", () => {
+    const { sheet, set } = sheetOf({ A1: "1" });
+    set("A1", "1");
+    expect(sheet.canUndo()).toBe(false);
+  });
+
+  it("reports what is available as the stack moves", () => {
+    const { sheet, set } = sheetOf();
+    set("A1", "x");
+    expect([sheet.canUndo(), sheet.canRedo()]).toEqual([true, false]);
+
+    sheet.undo();
+    expect([sheet.canUndo(), sheet.canRedo()]).toEqual([false, true]);
+  });
+
+  it("hands back the selection the edit was made in", () => {
+    const { sheet, set } = sheetOf();
+    set("C4", "x");
+
+    expect(sheet.undo()).toEqual(selectionAt({ row: 3, col: 2 }));
+    expect(sheet.redo()).toEqual(selectionAt({ row: 3, col: 2 }));
+  });
+
+  it("hands back nothing when there is nothing to undo", () => {
+    const { sheet } = sheetOf();
+    expect(sheet.undo()).toBeNull();
+    expect(sheet.redo()).toBeNull();
+  });
+
+  it("tells watchers once per action", () => {
+    const { sheet, set } = sheetOf();
+    const watch = vi.fn();
+    sheet.onEdit(watch);
+
+    set("A1", "x");
+    sheet.undo();
+    sheet.redo();
+    expect(watch).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports the recomputation order, starting at the cell that changed", () => {
+    const { sheet, set } = sheetOf({ A2: "=A1+1", A3: "=A2+1" });
+    const seen: CellKey[][] = [];
+    sheet.onRecalc(({ order }) => seen.push(order));
+
+    set("A1", "1");
+    expect(seen).toEqual([[at("A1"), at("A2"), at("A3")]]);
+  });
+
+  it("reports the cells a new formula started reading", () => {
+    const { sheet, set } = sheetOf({ A1: "2", A2: "3" });
+    const seen: CellKey[][] = [];
+    sheet.onRecalc(({ connected }) => seen.push(connected));
+
+    set("A3", "=A1+A2");
+    expect(seen).toEqual([[at("A1"), at("A2")]]);
+  });
+
+  it("reports nothing connected when a formula keeps the same precedents", () => {
+    const { sheet, set } = sheetOf({ A1: "2", A3: "=A1*2" });
+    const seen: CellKey[][] = [];
+    sheet.onRecalc(({ connected }) => seen.push(connected));
+
+    set("A3", "=A1*3");
+    expect(seen).toEqual([[]]);
+  });
+
+  it("reports a cell once even when an edit reaches it twice", () => {
+    const { sheet } = sheetOf({ C1: "=A1+B1" });
+    const seen: CellKey[][] = [];
+    sheet.onRecalc(({ order }) => seen.push(order));
+
+    sheet.edit(
+      [
+        [at("A1"), "1"],
+        [at("B1"), "2"],
+      ],
+      selectionAt({ row: 0, col: 0 }),
+    );
+
+    expect(seen[0]!.filter((key) => key === at("C1"))).toHaveLength(1);
   });
 });

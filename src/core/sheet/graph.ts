@@ -7,10 +7,25 @@ export type Plan = {
   circular: CellKey[];
 };
 
-export type Graph = {
-  setPrecedents(key: CellKey, precedents: readonly CellKey[]): void;
-  plan(from: CellKey): Plan;
+// how far a cell sits from the one being looked at, in either direction. one
+// hop is a cell the formula names itself, two is a cell that one reads, and so on
+export type Trace = {
+  inputs: Map<CellKey, number>;
+  outputs: Map<CellKey, number>;
 };
+
+export type Graph = {
+  // returns the precedents this cell did not have before, so a new connection
+  // can be shown being made rather than only its result
+  setPrecedents(key: CellKey, precedents: readonly CellKey[]): CellKey[];
+  // one edit can change several cells, and a cell reading two of them must be
+  // recomputed once, after both. so the plan is seeded with all of them at once.
+  plan(from: Iterable<CellKey>): Plan;
+  trace(from: CellKey): Trace;
+};
+
+// past three hops the tint is too faint to read and the sheet is just busy
+const TRACE_DEPTH = 3;
 
 export function createGraph(): Graph {
   // precedents: cells this formula reads. dependents: formulas that read this cell.
@@ -26,18 +41,28 @@ export function createGraph(): Graph {
     set.add(key);
   }
 
-  function setPrecedents(key: CellKey, next: readonly CellKey[]): void {
-    for (const previous of precedents.get(key) ?? []) {
-      dependents.get(previous)?.delete(key);
+  function setPrecedents(key: CellKey, next: readonly CellKey[]): CellKey[] {
+    const before = precedents.get(key) ?? new Set<CellKey>();
+
+    for (const previous of before) {
+      const readers = dependents.get(previous);
+      if (!readers) continue;
+      readers.delete(key);
+      // a wide range leaves one set per cell behind, and they never come back
+      if (readers.size === 0) dependents.delete(previous);
     }
 
-    precedents.set(key, new Set(next));
+    if (next.length === 0) precedents.delete(key);
+    else precedents.set(key, new Set(next));
+
     for (const precedent of next) addDependent(precedent, key);
+
+    return [...new Set(next)].filter((precedent) => !before.has(precedent));
   }
 
-  function affected(from: CellKey): Set<CellKey> {
-    const seen = new Set<CellKey>([from]);
-    const pending = [from];
+  function affected(from: Iterable<CellKey>): Set<CellKey> {
+    const seen = new Set<CellKey>(from);
+    const pending = [...seen];
 
     while (pending.length > 0) {
       const key = pending.pop()!;
@@ -53,7 +78,7 @@ export function createGraph(): Graph {
 
   // kahn's algorithm over the affected cells only. anything still holding an
   // unmet dependency when the queue empties is part of a cycle.
-  function plan(from: CellKey): Plan {
+  function plan(from: Iterable<CellKey>): Plan {
     const set = affected(from);
     const waitingOn = new Map<CellKey, number>();
     const ordered: CellKey[] = [];
@@ -82,5 +107,31 @@ export function createGraph(): Graph {
     return { ordered, circular };
   }
 
-  return { setPrecedents, plan };
+  // breadth first, so a cell reachable by two paths keeps the shorter one
+  function reach(edges: Map<CellKey, Set<CellKey>>, from: CellKey): Map<CellKey, number> {
+    const depths = new Map<CellKey, number>();
+    let frontier = [from];
+
+    for (let depth = 1; depth <= TRACE_DEPTH && frontier.length > 0; depth++) {
+      const next: CellKey[] = [];
+
+      for (const key of frontier) {
+        for (const edge of edges.get(key) ?? []) {
+          if (edge === from || depths.has(edge)) continue;
+          depths.set(edge, depth);
+          next.push(edge);
+        }
+      }
+
+      frontier = next;
+    }
+
+    return depths;
+  }
+
+  function trace(from: CellKey): Trace {
+    return { inputs: reach(precedents, from), outputs: reach(dependents, from) };
+  }
+
+  return { setPrecedents, plan, trace };
 }

@@ -1,0 +1,151 @@
+.lens {
+  position: absolute;
+  z-index: 4;
+  max-width: var(--lens-w);
+  padding: 14px 18px 15px;
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  animation: lens-in 140ms ease-out;
+  /* the answer, not a control: the cells behind it keep every click */
+  pointer-events: none;
+}
+
+.lens-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* the one part of the lens that is a control rather than a readout */
+.lens-option {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.lens-option.is-on {
+  background: rgb(var(--accent-rgb) / 0.9);
+}
+
+.lens-option-name {
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-cell);
+}
+
+.lens-option-summary {
+  overflow: hidden;
+  color: var(--paper-45);
+  font-family: var(--font-sans);
+  font-size: var(--text-hint);
+  text-overflow: ellipsis;
+}
+
+.lens-option.is-on .lens-option-summary {
+  color: var(--paper-82);
+}
+
+.lens-operators {
+  display: flex;
+  gap: 6px;
+  padding: 2px 8px;
+}
+
+.lens-operator {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  background: var(--paper-12);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-cell);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.lens-operator:hover {
+  background: rgb(var(--accent-rgb) / 0.9);
+}
+
+.lens-argument {
+  padding: 2px 8px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-hint);
+}
+
+/* the answer keeps the bottom of the panel whatever else is showing */
+.lens-result {
+  padding: 0 8px;
+}
+
+/* the rule only earns its place when there is something above it to divide */
+.lens-list + .lens-result,
+.lens-argument + .lens-result {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--paper-12);
+}
+
+.lens-answer {
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-message);
+  font-variant-numeric: tabular-nums;
+}
+
+/* opacity only: the position is already carried by transform */
+@keyframes lens-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.lens-label {
+  color: var(--paper-45);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lens-label.is-problem {
+  color: var(--accent);
+}
+
+.lens-value {
+  margin-top: 5px;
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-hero);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  word-break: break-all;
+}
+
+.lens-note {
+  margin-top: 6px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-cell);
+  line-height: 1.4;
+}
+
+.lens-message {
+  margin-top: 7px;
+  color: var(--paper-82);
+  font-family: var(--font-sans);
+  font-size: var(--text-message);
+  line-height: 1.4;
+}

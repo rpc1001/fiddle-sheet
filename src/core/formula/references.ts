@@ -1,5 +1,6 @@
 import { type CellKey, cellKey } from "../address";
-import { type Node, cellsIn } from "./parse";
+import { cellsIn } from "../range";
+import type { Node } from "./parse";
 
 // every cell a formula reads, so the dependency graph knows what it listens to
 export function references(node: Node): CellKey[] {
