@@ -5,6 +5,7 @@ import { selectionRange } from "../core/selection";
 import { offered, useEditing } from "../state/editing";
 import { useSelection } from "../state/selection";
 import { sheet, useSheetRevision } from "../state/sheet";
+import { chordLabel } from "./platform";
 import "./StatusBar.css";
 
 function behindClass(behind: string): string {
@@ -35,6 +36,13 @@ export function StatusBar() {
         empty: behind === "",
       };
 
+  // only while the key would actually do something, so the pill never teaches a
+  // shortcut that is currently dead
+  const history = [
+    { keys: chordLabel("Z"), label: "undo", live: sheet.canUndo() },
+    { keys: chordLabel("Y"), label: "redo", live: sheet.canRedo() },
+  ].filter((hint) => hint.live);
+
   return (
     <div className="status-bar">
       <span className="status-ref">{rangeLabel(range)}</span>
@@ -48,6 +56,13 @@ export function StatusBar() {
           </span>
         ))}
       </span>
+      {history.length > 0 && <span className="status-divider" />}
+      {history.map((hint) => (
+        <span key={hint.label} className="status-hint">
+          <kbd className="status-keys">{hint.keys}</kbd>
+          {hint.label}
+        </span>
+      ))}
     </div>
   );
 }

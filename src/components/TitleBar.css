@@ -1,13 +1,27 @@
 .title-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 7px;
   flex: none;
   height: var(--title-bar-h);
   padding: 0 18px;
   background: var(--card);
   border-bottom: 1px solid var(--edge-soft);
+}
+
+.title-name {
+  margin: 0;
+  color: var(--ink-72);
+  font-family: var(--font-sans);
+  font-size: var(--text-cell);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .bar-button {

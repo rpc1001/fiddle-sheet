@@ -18,7 +18,7 @@ export default function App() {
 
   return (
     <div className="app" style={geometry}>
-      <TitleBar onDone={() => grid.current?.focus()} />
+      <TitleBar />
       <Grid gridRef={grid} />
       <StatusBar />
     </div>
