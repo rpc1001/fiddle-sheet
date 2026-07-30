@@ -15,6 +15,17 @@
   pointer-events: none;
 }
 
+/* the selection is bigger than the window, so there is no edge of it left to
+   hang off: it takes the window's own right edge, and stays there while the
+   sheet scrolls under it rather than travelling away with a corner it is not
+   reading. the gap comes from the placement, so it is stated once. */
+.lens.is-in-window {
+  position: fixed;
+  right: var(--lens-gap);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .lens-list {
   margin: 0;
   padding: 0;

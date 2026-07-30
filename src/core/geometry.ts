@@ -85,6 +85,22 @@ export function fitsBelow(rect: Rect, height: number, gap: number, view: Viewpor
   return rect.top + rect.height + gap + height <= view.scrollTop + view.height;
 }
 
+export function fitsAbove(rect: Rect, height: number, gap: number, view: Viewport): boolean {
+  return rect.top - gap - height >= view.scrollTop + HEADER_HEIGHT;
+}
+
+// where a panel of this size can start if it wants to start there: as asked,
+// unless that would hang it off one edge of the window or the other
+export function keepAcross(x: number, width: number, gap: number, view: Viewport): number {
+  const last = view.scrollLeft + view.width - gap - width;
+  return Math.max(view.scrollLeft + GUTTER_WIDTH, Math.min(x, last));
+}
+
+export function keepDown(y: number, height: number, gap: number, view: Viewport): number {
+  const last = view.scrollTop + view.height - gap - height;
+  return Math.max(view.scrollTop + HEADER_HEIGHT, Math.min(y, last));
+}
+
 // the part of a rect that is on screen, and the only part a panel beside it can
 // aim at: a whole column is taller than the window and a whole row is wider, so
 // the rect's own middle and its own edges are somewhere nobody is looking

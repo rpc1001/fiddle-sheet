@@ -1,9 +1,20 @@
 import type { CSSProperties, RefObject } from "react";
-import { cellKey } from "../core/address";
+import { type Address, cellKey } from "../core/address";
 import { formatNumber } from "../core/format";
 import { type CellValue, errorDisplay, isError } from "../core/formula/errors";
 import { explainError, hasReference, substitute } from "../core/formula/explain";
-import { type Viewport, fitsBelow, fitsRight, rectOf } from "../core/geometry";
+import {
+  type Viewport,
+  fitsAbove,
+  fitsBelow,
+  fitsLeft,
+  fitsRight,
+  keepAcross,
+  keepDown,
+  type Rect,
+  rectOf,
+  visiblePart,
+} from "../core/geometry";
 import { type Range, isSingleCell, rangeAt } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { summarize } from "../core/summary";
@@ -17,8 +28,9 @@ import "./Lens.css";
 const GAP = 18;
 const WIDTH = 236;
 const DRAFT_WIDTH = 330;
-// enough of the panel to know whether it would fall off the bottom
+// enough of each panel to know whether it would fall off the bottom
 const DRAFT_HEIGHT = 150;
+const ANSWER_HEIGHT = 108;
 
 type View =
   | { kind: "answer"; label: string; value: string; note: string | null }
@@ -84,17 +96,75 @@ function draftPlacement(range: Range, view: Viewport): CSSProperties {
   } as CSSProperties;
 }
 
-// beside the selection when the cell is closed, on whichever side has the room
-function answerPlacement(range: Range, view: Viewport): CSSProperties {
-  const box = rectOf(range);
-  const left = !fitsRight(box, WIDTH, GAP, view);
+// against the selection, or against the window when the selection leaves no
+// clear space to hang off at all
+type Placement = { at: "selection" | "window"; style: CSSProperties };
+
+type Side = "right" | "left" | "below" | "above";
+
+const SIDES: Side[] = ["right", "left", "below", "above"];
+
+// how far the cell being worked on sits from each edge of the selection
+function distanceFrom(cell: Rect, box: Rect, side: Side): number {
+  if (side === "right") return box.left + box.width - (cell.left + cell.width);
+  if (side === "left") return cell.left - box.left;
+  if (side === "below") return box.top + box.height - (cell.top + cell.height);
+  return cell.top - box.top;
+}
+
+// the nearest edge of the selection with room beside it, lined up with the cell
+// being worked on. one rule rather than a running order: the answer turns up
+// where the hand already is, and on a selection wider than the window a fixed
+// preference for one side puts it clean across the screen from the pointer.
+// it measures the visible part of the selection, not the whole of it: a band
+// runs past the window on one axis, so its own edges are off screen.
+function answerPlacement(range: Range, focus: Address, view: Viewport): Placement {
+  const box = visiblePart(rectOf(range), view);
+  const cell = rectOf(rangeAt(focus));
+  const panel = { "--lens-w": `${WIDTH}px` } as CSSProperties;
+
+  const room: Record<Side, boolean> = {
+    right: fitsRight(box, WIDTH, GAP, view),
+    left: fitsLeft(box, WIDTH, GAP, view),
+    below: fitsBelow(box, ANSWER_HEIGHT, GAP, view),
+    above: fitsAbove(box, ANSWER_HEIGHT, GAP, view),
+  };
+
+  const free = SIDES.filter((side) => room[side]);
+
+  // the selection fills the window both ways, so there is no clear space to find
+  // and covering some of it is the only option left. it takes the window's right
+  // edge instead of the selection's, which also makes it the one placement that
+  // stays put while the sheet scrolls.
+  if (free.length === 0) {
+    return { at: "window", style: { ...panel, "--lens-gap": `${GAP}px` } as CSSProperties };
+  }
+
+  const side = free.reduce((near, other) =>
+    distanceFrom(cell, box, other) < distanceFrom(cell, box, near) ? other : near,
+  );
+  const alongside = keepDown(cell.top, ANSWER_HEIGHT, GAP, view);
+  const under = keepAcross(cell.left, WIDTH, GAP, view);
+
+  if (side === "right") {
+    return { at: "selection", style: { ...panel, left: box.left + box.width + GAP, top: alongside } };
+  }
+
+  if (side === "left") {
+    return {
+      at: "selection",
+      style: { ...panel, left: box.left - GAP, top: alongside, transform: "translateX(-100%)" },
+    };
+  }
+
+  if (side === "below") {
+    return { at: "selection", style: { ...panel, left: under, top: box.top + box.height + GAP } };
+  }
 
   return {
-    left: left ? box.left - GAP : box.left + box.width + GAP,
-    top: box.top + box.height / 2,
-    transform: left ? "translate(-100%, -50%)" : "translateY(-50%)",
-    "--lens-w": `${WIDTH}px`,
-  } as CSSProperties;
+    at: "selection",
+    style: { ...panel, left: under, top: box.top - GAP, transform: "translateY(-100%)" },
+  };
 }
 
 function Body({ view }: { view: View }) {
@@ -140,8 +210,13 @@ export function Lens({ viewport }: { viewport: RefObject<HTMLDivElement | null> 
   const view = isSingleCell(range) ? cellView(range.top, range.left) : rangeView(range);
   if (!view) return null;
 
+  const placement = answerPlacement(range, selection.focus, box);
+
   return (
-    <div className="lens" style={answerPlacement(range, box)}>
+    <div
+      className={placement.at === "window" ? "lens is-in-window" : "lens"}
+      style={placement.style}
+    >
       <Body view={view} />
     </div>
   );

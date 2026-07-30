@@ -9,10 +9,13 @@ import {
   SHEET_HEIGHT,
   SHEET_WIDTH,
   cellAtPoint,
+  fitsAbove,
   fitsBelow,
   fitsLeft,
   fitsRight,
   insetOf,
+  keepAcross,
+  keepDown,
   rectOf,
   switchesAxis,
   scrollToShow,
@@ -178,6 +181,14 @@ describe("fitsRight, fitsLeft and fitsBelow", () => {
     expect(fitsBelow(cellRect(8, 0), 150, 18, view)).toBe(false);
   });
 
+  it("refuses a panel that would slide under the header", () => {
+    expect(fitsAbove(cellRect(0, 0), 150, 18, view)).toBe(false);
+    expect(fitsAbove(cellRect(1, 0), 150, 18, view)).toBe(false);
+  });
+
+  it("accepts a panel with room above the cell", () => {
+    expect(fitsAbove(cellRect(7, 0), 150, 18, view)).toBe(true);
+  });
 
   it("measures from the scrolled window, so scrolling makes room", () => {
     const scrolled = { ...view, scrollLeft: 400, scrollTop: 400 };
@@ -232,3 +243,24 @@ describe("switchesAxis", () => {
   });
 });
 
+describe("keepAcross and keepDown", () => {
+  it("starts the panel where it was asked to", () => {
+    expect(keepAcross(200, 236, 18, view)).toBe(200);
+    expect(keepDown(100, 108, 18, view)).toBe(100);
+  });
+
+  it("pulls it back when it would hang off the far edge", () => {
+    expect(keepAcross(400, 236, 18, view)).toBe(view.width - 18 - 236);
+    expect(keepDown(280, 108, 18, view)).toBe(view.height - 18 - 108);
+  });
+
+  it("never starts it under the gutter or the header", () => {
+    expect(keepAcross(0, 236, 18, view)).toBe(GUTTER_WIDTH);
+    expect(keepDown(0, 108, 18, view)).toBe(HEADER_HEIGHT);
+  });
+
+  it("measures from the scrolled window", () => {
+    expect(keepAcross(1000, 236, 18, { ...view, scrollLeft: 300 })).toBe(300 + view.width - 18 - 236);
+    expect(keepDown(1000, 108, 18, { ...view, scrollTop: 300 })).toBe(300 + view.height - 18 - 108);
+  });
+});
