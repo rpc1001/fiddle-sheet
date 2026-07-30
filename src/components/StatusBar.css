@@ -3,28 +3,110 @@
   left: 50%;
   bottom: 22px;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 9px 15px 9px 9px;
   background: var(--paper-veil);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--edge-faint);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-float);
+  /* the outline as a ring rather than a border, so the shell's width is exactly
+     the width measured from the row and nothing has to account for two edges */
+  box-shadow:
+    0 0 0 1px var(--edge-faint),
+    var(--shadow-float);
+  overflow: hidden;
   white-space: nowrap;
+  transition: width var(--track-ms) var(--ease-track);
   /* a readout, never a target: clicks belong to the cells underneath */
   pointer-events: none;
 }
 
+/* measured at its natural width whatever the shell has been set to, otherwise
+   the shell it is sizing would size it back */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: max-content;
+  padding: 9px 15px 9px 9px;
+}
+
+/* a recess in the island rather than a badge on it: the address is a label for
+   the selection, and the accent belongs to the selection itself */
 .status-ref {
-  padding: 7px 10px;
-  background: var(--accent);
-  border-radius: var(--radius-pill);
-  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: var(--tracking-label);
+  padding: 7px 9px;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 2px rgb(var(--ink-rgb) / 0.07);
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: var(--text-hint);
+  font-size: var(--text-label);
   line-height: 1;
+}
+
+/* the one place accent is earned here, and it says what the value beside it
+   already says in colour: what is in this cell is a formula */
+.status-ref.is-formula {
+  box-shadow:
+    inset 2px 0 0 var(--accent),
+    inset 0 1px 2px rgb(var(--ink-rgb) / 0.07);
+}
+
+.status-address {
+  display: flex;
+  align-items: center;
+  gap: var(--tracking-label);
+}
+
+.status-address-row {
+  display: flex;
+  align-items: center;
+  gap: var(--tracking-label);
+  color: var(--ink-45);
+}
+
+.status-ref-join {
+  color: var(--ink-30);
+}
+
+/* one glyph wide and one line tall, so whichever way a reel turns the glyph
+   leaving is cut off at the edge of its own box */
+.status-reel {
+  position: relative;
+  display: block;
+  width: 1ch;
+  height: 1em;
+  overflow: hidden;
+}
+
+.status-reel-in,
+.status-reel-out {
+  display: block;
+  height: 1em;
+}
+
+.status-reel-out {
+  position: absolute;
+  inset: 0;
+  animation: reel-out var(--track-ms) var(--ease-track) both;
+}
+
+.status-reel-in.is-rolling {
+  animation: reel-in var(--track-ms) var(--ease-track) both;
+}
+
+@keyframes reel-in {
+  from {
+    transform: var(--reel-from);
+    opacity: 0;
+  }
+}
+
+@keyframes reel-out {
+  to {
+    transform: var(--reel-to);
+    opacity: 0;
+  }
 }
 
 .status-behind {
@@ -43,16 +125,20 @@
   color: var(--ink-30);
 }
 
-.status-divider {
-  width: 1px;
-  height: 17px;
-  background: var(--edge-faint);
-}
-
 .status-hints {
   display: flex;
   align-items: center;
   gap: 12px;
+  animation: hints-in var(--track-ms) var(--ease-track) both;
+}
+
+/* the row is keyed on the hints it holds, so a different set of them arrives
+   rather than appearing in place of the last one */
+@keyframes hints-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
 }
 
 .status-hint {
