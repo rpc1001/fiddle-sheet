@@ -20,6 +20,15 @@ export function isSingleCell(range: Range): boolean {
   return range.top === range.bottom && range.left === range.right;
 }
 
+// the same block of cells somewhere else. every edge of one is the same distance
+// from its partner, which is the only case where overshooting a move cannot also
+// overshoot the size.
+export function sameSize(one: Range, two: Range): boolean {
+  return (
+    one.bottom - one.top === two.bottom - two.top && one.right - one.left === two.right - two.left
+  );
+}
+
 export function rangeLabel(range: Range): string {
   const start = addressLabel({ row: range.top, col: range.left });
   if (isSingleCell(range)) return start;

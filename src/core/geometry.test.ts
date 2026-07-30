@@ -6,11 +6,18 @@ import {
   HEADER_HEIGHT,
   ROW_HEIGHT,
   ROWS,
+  SHEET_HEIGHT,
+  SHEET_WIDTH,
   cellAtPoint,
   fitsBelow,
+  fitsLeft,
   fitsRight,
+  insetOf,
   rectOf,
+  switchesAxis,
   scrollToShow,
+  visiblePart,
+  zoneAtPoint,
 } from "./geometry";
 import { rangeBetween } from "./range";
 
@@ -46,6 +53,21 @@ describe("cellAtPoint", () => {
 
   it("clamps a point dragged past the last cell", () => {
     expect(cellAtPoint(100_000, 100_000)).toEqual({ row: ROWS - 1, col: COLS - 1 });
+  });
+});
+
+describe("zoneAtPoint", () => {
+  it("names each band by its own corner", () => {
+    expect(zoneAtPoint(0, 0)).toBe("corner");
+    expect(zoneAtPoint(GUTTER_WIDTH, 0)).toBe("header");
+    expect(zoneAtPoint(0, HEADER_HEIGHT)).toBe("gutter");
+    expect(zoneAtPoint(GUTTER_WIDTH, HEADER_HEIGHT)).toBe("cell");
+  });
+
+  it("keeps the last pixel of the header and the gutter out of the cells", () => {
+    expect(zoneAtPoint(GUTTER_WIDTH - 1, HEADER_HEIGHT - 1)).toBe("corner");
+    expect(zoneAtPoint(500, HEADER_HEIGHT - 1)).toBe("header");
+    expect(zoneAtPoint(GUTTER_WIDTH - 1, 500)).toBe("gutter");
   });
 });
 
@@ -110,7 +132,42 @@ describe("scrollToShow", () => {
   });
 });
 
-describe("fitsRight and fitsBelow", () => {
+describe("visiblePart", () => {
+  const column = rectOf(rangeBetween({ row: 0, col: 1 }, { row: ROWS - 1, col: 1 }));
+
+  it("leaves a rect that is already on screen alone", () => {
+    expect(visiblePart(cellRect(1, 1), view)).toEqual(cellRect(1, 1));
+  });
+
+  it("clips a whole column to the rows in the window", () => {
+    const part = visiblePart(column, view);
+    expect(part).toMatchObject({ left: column.left, top: HEADER_HEIGHT, width: COL_WIDTH });
+    expect(part.height).toBe(view.height - HEADER_HEIGHT);
+  });
+
+  it("follows the window as it scrolls down the same column", () => {
+    const part = visiblePart(column, { ...view, scrollTop: 600 });
+    expect(part.top).toBe(600 + HEADER_HEIGHT);
+    expect(part.height).toBe(view.height - HEADER_HEIGHT);
+  });
+
+  it("keeps a whole row clear of the gutter", () => {
+    const row = rectOf(rangeBetween({ row: 2, col: 0 }, { row: 2, col: COLS - 1 }));
+    const part = visiblePart(row, { ...view, scrollLeft: 400 });
+    expect(part.left).toBe(400 + GUTTER_WIDTH);
+    expect(part.width).toBe(view.width - GUTTER_WIDTH);
+  });
+});
+
+describe("fitsRight, fitsLeft and fitsBelow", () => {
+  it("accepts a panel with room on the far side of the gutter", () => {
+    expect(fitsLeft(cellRect(0, 6), 200, 18, view)).toBe(true);
+  });
+
+  it("refuses a panel that would slide under the gutter", () => {
+    expect(fitsLeft(cellRect(0, 1), 200, 18, view)).toBe(false);
+  });
+
   it("accepts a panel with room beside the cell", () => {
     expect(fitsRight(cellRect(0, 0), 200, 18, view)).toBe(true);
     expect(fitsBelow(cellRect(0, 0), 150, 18, view)).toBe(true);
@@ -121,9 +178,57 @@ describe("fitsRight and fitsBelow", () => {
     expect(fitsBelow(cellRect(8, 0), 150, 18, view)).toBe(false);
   });
 
+
   it("measures from the scrolled window, so scrolling makes room", () => {
     const scrolled = { ...view, scrollLeft: 400, scrollTop: 400 };
     expect(fitsRight(cellRect(0, 4), 200, 18, scrolled)).toBe(true);
     expect(fitsBelow(cellRect(8, 0), 150, 18, scrolled)).toBe(true);
   });
 });
+
+describe("insetOf", () => {
+  const whole = { top: 0, left: 0, bottom: ROWS - 1, right: COLS - 1 };
+
+  it("gives the same box as rectOf, measured from the far edges", () => {
+    const range = rangeBetween({ row: 1, col: 2 }, { row: 4, col: 5 });
+    const rect = rectOf(range);
+    const inset = insetOf(range);
+
+    expect(inset.left).toBe(rect.left);
+    expect(inset.top).toBe(rect.top);
+    expect(SHEET_WIDTH - inset.right - inset.left).toBe(rect.width);
+    expect(SHEET_HEIGHT - inset.bottom - inset.top).toBe(rect.height);
+  });
+
+  it("puts a band flush against the edges it fills", () => {
+    const column = { top: 0, left: 2, bottom: ROWS - 1, right: 2 };
+
+    expect(insetOf(column).top).toBe(HEADER_HEIGHT);
+    expect(insetOf(column).bottom).toBe(0);
+    expect(insetOf(whole)).toEqual({ left: GUTTER_WIDTH, top: HEADER_HEIGHT, right: 0, bottom: 0 });
+  });
+});
+
+describe("switchesAxis", () => {
+  const cell = { top: 3, left: 3, bottom: 3, right: 3 };
+  const column = { top: 0, left: 2, bottom: ROWS - 1, right: 2 };
+  const row = { top: 5, left: 0, bottom: 5, right: COLS - 1 };
+  const sheet = { top: 0, left: 0, bottom: ROWS - 1, right: COLS - 1 };
+
+  it("is true only between bands of different axes", () => {
+    expect(switchesAxis(column, row)).toBe(true);
+    expect(switchesAxis(row, column)).toBe(true);
+  });
+
+  it("is false when an axis carries over, so the box still has an edge to travel", () => {
+    expect(switchesAxis(cell, column)).toBe(false);
+    expect(switchesAxis(cell, row)).toBe(false);
+    expect(switchesAxis(column, sheet)).toBe(false);
+    expect(switchesAxis(column, column)).toBe(false);
+  });
+
+  it("counts the whole sheet as a band on both axes", () => {
+    expect(switchesAxis(sheet, cell)).toBe(true);
+  });
+});
+

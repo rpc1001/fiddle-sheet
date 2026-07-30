@@ -79,11 +79,19 @@
   border-radius: var(--radius-lg);
   background: var(--accent-tint);
   pointer-events: none;
-  /* position and size rather than transform: scaling would stretch the border
-     and squash the radius, and out of flow this cannot dirty the cells */
-  transition-property: left, top, width, height;
+  /* its own compositor layer. without one, every frame of a move repaints the
+     changed region and the cells under it, which is thousands of them once the
+     selection is a band: measured six dropped frames on a column to row move,
+     none with this. transform is the hint that promotes, not what is animated. */
+  will-change: transform;
+  /* four edges rather than transform: scaling would stretch the border and
+     squash the radius, and out of flow this cannot dirty the cells. each edge
+     moves on its own, which is what lets one of them stay put. */
+  transition-property: left, top, right, bottom;
   transition-duration: var(--travel-ms);
-  transition-timing-function: var(--ease-travel);
+  /* edges that move different distances settle: an overshoot between them is the
+     size overshooting, and a shrinking box flicks past itself and reads as a line */
+  transition-timing-function: var(--ease-track);
 }
 
 /* under the corner, over the header and the gutter */
@@ -111,14 +119,18 @@
   height: 100%;
 }
 
+/* only the edges it shares with the box, on the box's duration and curve, so a
+   band and its lid are never mid travel at different places. the depth into the
+   header is not one of them: a lid has arrived by definition. */
 .grid-mark {
   position: absolute;
-  transition-property: left, top, width, height, opacity;
+  will-change: transform;
   transition-duration: var(--travel-ms);
-  transition-timing-function: var(--ease-travel);
+  transition-timing-function: var(--ease-track);
 }
 
 .grid-mark.is-column {
+  transition-property: left, right, opacity;
   bottom: 0;
   height: 11px;
   border-bottom: 1.5px solid var(--ink-42);
@@ -126,10 +138,68 @@
 }
 
 .grid-mark.is-row {
+  transition-property: top, bottom, opacity;
   right: 0;
   width: 11px;
   border-right: 1.5px solid var(--ink-42);
   background: linear-gradient(to left, rgb(var(--ink-rgb) / 0.13), transparent);
+}
+
+/* selected whole, the header is not a second thing selected, it is the same
+   selection reaching its label. so the band takes the box's border, radius and
+   fill, drops the edge they share, and the box drops it too: one capsule drawn
+   in two pieces, which is what lets the lid stay behind when the box scrolls. */
+.grid-mark.is-band {
+  border: 2px solid var(--accent);
+  background: var(--accent-tint);
+}
+
+.grid-mark.is-band.is-column {
+  height: var(--header-h);
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.grid-mark.is-band.is-row {
+  width: var(--gutter-w);
+  border-right: none;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+/* the lid is at the header the moment the band is one, so an edge travelling up
+   to meet it would hold the capsule open for the length of the travel. that edge
+   arrives and the far one travels, which is the column unrolling out of its
+   header rather than sliding up into it. */
+.grid-selection.is-capped-top {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  transition-property: left, right, bottom;
+}
+
+.grid-selection.is-capped-left {
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  transition-property: top, right, bottom;
+}
+
+.grid-selection.is-capped-top.is-capped-left {
+  transition-property: right, bottom;
+}
+
+/* the whole box at one distance: an overshoot is then the position overshooting
+   and nothing else, so this is the only case that gets the whip */
+.grid-selection.is-travelling,
+.grid-mark.is-travelling {
+  transition-timing-function: var(--ease-travel);
+}
+
+/* duration rather than property, so this composes with whichever edges are
+   pinned above instead of having to restate them */
+.grid-selection.is-arriving,
+.grid-mark.is-arriving {
+  transition-duration: 0s;
 }
 
 .grid-editor {

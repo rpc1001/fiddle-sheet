@@ -33,6 +33,24 @@ export function cellAtPoint(x: number, y: number): Address {
   };
 }
 
+export function coversEveryRow(range: Range): boolean {
+  return range.top === 0 && range.bottom === ROWS - 1;
+}
+
+export function coversEveryColumn(range: Range): boolean {
+  return range.left === 0 && range.right === COLS - 1;
+}
+
+export type Zone ="corner" | "header" | "gutter" | "cell";
+
+// x and y are relative to the visible window, not to the sheet: the header and
+// the gutter are stuck over its near edges and the cells scroll under them, so
+// the sheet's own coordinates cannot say which band a press landed in.
+export function zoneAtPoint(x: number, y: number): Zone {
+  if (y < HEADER_HEIGHT) return x < GUTTER_WIDTH ? "corner" : "header";
+  return x < GUTTER_WIDTH ? "gutter" : "cell";
+}
+
 export type Viewport = { scrollLeft: number; scrollTop: number; width: number; height: number };
 
 // the smallest scroll change that brings a rect fully into view. the header and
@@ -59,8 +77,27 @@ export function fitsRight(rect: Rect, width: number, gap: number, view: Viewport
   return rect.left + rect.width + gap + width <= view.scrollLeft + view.width;
 }
 
+export function fitsLeft(rect: Rect, width: number, gap: number, view: Viewport): boolean {
+  return rect.left - gap - width >= view.scrollLeft + GUTTER_WIDTH;
+}
+
 export function fitsBelow(rect: Rect, height: number, gap: number, view: Viewport): boolean {
   return rect.top + rect.height + gap + height <= view.scrollTop + view.height;
+}
+
+// the part of a rect that is on screen, and the only part a panel beside it can
+// aim at: a whole column is taller than the window and a whole row is wider, so
+// the rect's own middle and its own edges are somewhere nobody is looking
+export function visiblePart(rect: Rect, view: Viewport): Rect {
+  const left = Math.max(rect.left, view.scrollLeft + GUTTER_WIDTH);
+  const top = Math.max(rect.top, view.scrollTop + HEADER_HEIGHT);
+
+  return {
+    left,
+    top,
+    width: Math.min(rect.left + rect.width, view.scrollLeft + view.width) - left,
+    height: Math.min(rect.top + rect.height, view.scrollTop + view.height) - top,
+  };
 }
 
 export function rectOf(range: Range): Rect {
@@ -70,4 +107,31 @@ export function rectOf(range: Range): Rect {
     width: (range.right - range.left + 1) * COL_WIDTH,
     height: (range.bottom - range.top + 1) * ROW_HEIGHT,
   };
+}
+
+export type Inset = { left: number; top: number; right: number; bottom: number };
+
+// the same box as rectOf, given as the distance from each edge of the sheet
+// instead of a corner and a size. an edge that is already where it belongs can
+// then stay there while the far one travels, which a width cannot express: a
+// width is measured from the near edge, so pinning one moves the other.
+export function insetOf(range: Range): Inset {
+  const rect = rectOf(range);
+
+  return {
+    left: rect.left,
+    top: rect.top,
+    right: SHEET_WIDTH - (rect.left + rect.width),
+    bottom: SHEET_HEIGHT - (rect.top + rect.height),
+  };
+}
+
+// a band of columns and a band of rows have no edge in common to travel along,
+// so a box morphing from one to the other sweeps a block of the sheet that was
+// never selected on its way through
+export function switchesAxis(from: Range, to: Range): boolean {
+  return (
+    coversEveryRow(from) !== coversEveryRow(to) &&
+    coversEveryColumn(from) !== coversEveryColumn(to)
+  );
 }

@@ -9,9 +9,24 @@ import {
 } from "react";
 import { type Address, cellKey, columnLabel } from "../core/address";
 import { acceptsReference, insertReference } from "../core/formula/insert";
-import { COLS, ROWS, cellAtPoint, rectOf, scrollToShow } from "../core/geometry";
+import {
+  COLS,
+  ROWS,
+  type Zone,
+  cellAtPoint,
+  rectOf,
+  scrollToShow,
+  zoneAtPoint,
+} from "../core/geometry";
 import { cellsIn, rangeAt } from "../core/range";
-import { moved, sameCell, selectionRange } from "../core/selection";
+import {
+  type Selection,
+  columnSpan,
+  moved,
+  rowSpan,
+  sameCell,
+  selectionRange,
+} from "../core/selection";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
 import { getHover, setHover } from "../state/hover";
 import { getSelection, setSelection } from "../state/selection";
@@ -34,7 +49,7 @@ const STEPS: Record<string, [number, number]> = {
   ArrowRight: [0, 1],
 };
 
-type Drag = "selection" | "reference" | null;
+type Drag = "selection" | "reference" | "column" | "row" | null;
 
 function Cell({ row, col }: { row: number; col: number }) {
   const { display, numeric } = useCell(row, col);
@@ -77,6 +92,27 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     bounds.current ??= gridRef.current!.getBoundingClientRect();
     const box = bounds.current;
     return cellAtPoint(event.clientX - box.left, event.clientY - box.top);
+  }
+
+  // the grid's own top left scrolls away under the header and the gutter, so the
+  // scroll offset has to come back off before the bands can be tested
+  function zoneUnder(event: { clientX: number; clientY: number }): Zone {
+    bounds.current ??= gridRef.current!.getBoundingClientRect();
+    const box = bounds.current;
+    const view = viewport.current;
+    return zoneAtPoint(
+      event.clientX - box.left - (view?.scrollLeft ?? 0),
+      event.clientY - box.top - (view?.scrollTop ?? 0),
+    );
+  }
+
+  // a press on the header, the gutter or the corner selects whole columns or
+  // whole rows. shift keeps the band anchored where it started.
+  function bandAt(zone: Zone, cell: Address, extend: boolean): Selection {
+    const anchor = getSelection().anchor;
+    if (zone === "corner") return columnSpan(0, COLS - 1);
+    if (zone === "header") return columnSpan(extend ? anchor.col : cell.col, cell.col);
+    return rowSpan(extend ? anchor.row : cell.row, cell.row);
   }
 
   function revealFocus(): void {
@@ -124,8 +160,12 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     if ((event.target as HTMLElement).closest(".grid-editor, .lens")) return;
 
     const cell = cellUnder(event);
+    const zone = zoneUnder(event);
 
-    if (writeReference(cell, event.shiftKey)) {
+    if (zone !== "cell") {
+      setSelection(bandAt(zone, cell, event.shiftKey));
+      drag.current = zone === "corner" ? null : zone === "header" ? "column" : "row";
+    } else if (writeReference(cell, event.shiftKey)) {
       // keep the caret in the editor: the default action would move focus here
       event.preventDefault();
       drag.current = "reference";
@@ -158,6 +198,16 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     }
 
     const selection = getSelection();
+
+    if (drag.current === "column" || drag.current === "row") {
+      const band =
+        drag.current === "column"
+          ? columnSpan(selection.anchor.col, cell.col)
+          : rowSpan(selection.anchor.row, cell.row);
+      if (!sameCell(selection.focus, band.focus)) setSelection(band);
+      return;
+    }
+
     if (sameCell(selection.focus, cell)) return;
     setSelection({ anchor: selection.anchor, focus: cell });
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cellsIn, rangeBetween } from "./range";
+import { cellsIn, rangeBetween, sameSize } from "./range";
 
 describe("rangeBetween", () => {
   it("keeps corners given top-left to bottom-right", () => {
@@ -48,5 +48,22 @@ describe("cellsIn", () => {
       { row: 1, col: 0 },
       { row: 1, col: 1 },
     ]);
+  });
+});
+
+describe("sameSize", () => {
+  const block = { top: 1, left: 1, bottom: 3, right: 2 };
+
+  it("is true for the same block somewhere else", () => {
+    expect(sameSize(block, { top: 5, left: 4, bottom: 7, right: 5 })).toBe(true);
+  });
+
+  it("is false when either side changes length", () => {
+    expect(sameSize(block, { top: 1, left: 1, bottom: 4, right: 2 })).toBe(false);
+    expect(sameSize(block, { top: 1, left: 1, bottom: 3, right: 3 })).toBe(false);
+  });
+
+  it("is true for a cell moving to another cell", () => {
+    expect(sameSize({ top: 0, left: 0, bottom: 0, right: 0 }, { top: 9, left: 9, bottom: 9, right: 9 })).toBe(true);
   });
 });
