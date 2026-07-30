@@ -7,6 +7,10 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-float);
   animation: lens-in 140ms ease-out;
+  /* travels with the selection it is reading, on the selection's own curve */
+  transition-property: left, top;
+  transition-duration: var(--travel-ms);
+  transition-timing-function: var(--ease-travel);
   /* the answer, not a control: the cells behind it keep every click */
   pointer-events: none;
 }

@@ -66,6 +66,57 @@
   border-radius: var(--radius-lg);
   background: var(--accent-tint);
   pointer-events: none;
+  /* position and size rather than transform: scaling would stretch the border
+     and squash the radius, and out of flow this cannot dirty the cells */
+  transition-property: left, top, width, height;
+  transition-duration: var(--travel-ms);
+  transition-timing-function: var(--ease-travel);
+}
+
+/* under the corner, over the header and the gutter */
+.grid-rail-track {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* a sticky element can only travel inside its containing block, which is why
+   each rail sits in a track the full size of the sheet */
+.grid-rail {
+  position: sticky;
+}
+
+.grid-rail.is-column {
+  top: 0;
+  height: var(--header-h);
+}
+
+.grid-rail.is-row {
+  left: 0;
+  width: var(--gutter-w);
+  height: 100%;
+}
+
+.grid-mark {
+  position: absolute;
+  transition-property: left, top, width, height, opacity;
+  transition-duration: var(--travel-ms);
+  transition-timing-function: var(--ease-travel);
+}
+
+.grid-mark.is-column {
+  bottom: 0;
+  height: 11px;
+  border-bottom: 1.5px solid var(--ink-42);
+  background: linear-gradient(to top, rgb(var(--ink-rgb) / 0.13), transparent);
+}
+
+.grid-mark.is-row {
+  right: 0;
+  width: 11px;
+  border-right: 1.5px solid var(--ink-42);
+  background: linear-gradient(to left, rgb(var(--ink-rgb) / 0.13), transparent);
 }
 
 .grid-editor {
