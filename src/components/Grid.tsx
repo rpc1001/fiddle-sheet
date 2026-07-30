@@ -13,9 +13,11 @@ import { COLS, ROWS, cellAtPoint, rectOf, scrollToShow } from "../core/geometry"
 import { cellsIn, rangeAt } from "../core/range";
 import { moved, sameCell, selectionRange } from "../core/selection";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
+import { getHover, setHover } from "../state/hover";
 import { getSelection, setSelection } from "../state/selection";
 import { redo, sheet, undo, useCell } from "../state/sheet";
 import { Editor } from "./Editor";
+import { HoverRing } from "./Hover";
 import { Lens } from "./Lens";
 import { SelectionOverlay } from "./Selection";
 import { TraceOverlay } from "./Trace";
@@ -50,6 +52,7 @@ function isChord(event: KeyboardEvent, key: string): boolean {
 
 export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> }) {
   const viewport = useRef<HTMLDivElement>(null);
+  const bounds = useRef<DOMRect | null>(null);
   const drag = useRef<Drag>(null);
   const referenceAnchor = useRef<Address | null>(null);
   const referenceFocus = useRef<Address | null>(null);
@@ -57,9 +60,23 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   // react only honours autoFocus on form controls, so the grid asks for itself
   useEffect(() => gridRef.current?.focus(), [gridRef]);
 
+  // registered once: the handler only clears a ref, so it never goes stale
+  useEffect(() => {
+    window.addEventListener("resize", forgetBounds);
+    return () => window.removeEventListener("resize", forgetBounds);
+  }, []);
+
+  // measuring the grid forces the browser to settle any layout still pending,
+  // and a travelling selection leaves some pending on every frame. only scroll
+  // and resize can move it, so it is measured again after those and not per move.
+  function forgetBounds(): void {
+    bounds.current = null;
+  }
+
   function cellUnder(event: { clientX: number; clientY: number }): Address {
-    const bounds = gridRef.current!.getBoundingClientRect();
-    return cellAtPoint(event.clientX - bounds.left, event.clientY - bounds.top);
+    bounds.current ??= gridRef.current!.getBoundingClientRect();
+    const box = bounds.current;
+    return cellAtPoint(event.clientX - box.left, event.clientY - box.top);
   }
 
   function revealFocus(): void {
@@ -123,8 +140,14 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>): void {
-    if (!drag.current) return;
     const cell = cellUnder(event);
+
+    // the ring tracks whether or not a drag is running, so this sits ahead of
+    // the guard below
+    const hovered = getHover();
+    if (!hovered || !sameCell(hovered, cell)) setHover(cell);
+
+    if (!drag.current) return;
 
     // pointermove fires many times per cell, and rewriting the same reference
     // re-parses and re-evaluates the whole draft on each one
@@ -192,7 +215,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   }
 
   return (
-    <div className="grid-viewport" ref={viewport}>
+    <div className="grid-viewport" ref={viewport} onScroll={forgetBounds}>
       <div
         className="grid"
         ref={gridRef}
@@ -201,6 +224,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onPointerLeave={() => setHover(null)}
         onDoubleClick={onDoubleClick}
         onKeyDown={onKeyDown}
       >
@@ -219,6 +243,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
           </Fragment>
         ))}
         <TraceOverlay />
+        <HoverRing />
         <SelectionOverlay />
         <Lens viewport={viewport} />
         <Editor viewport={viewport} onDone={focusGrid} />

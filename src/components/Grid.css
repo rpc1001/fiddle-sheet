@@ -60,6 +60,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* always one cell, so only the position ever moves */
+.grid-hover {
+  position: absolute;
+  width: var(--col-w);
+  height: var(--row-h);
+  border: 1.5px solid var(--edge-faint);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  transition-property: left, top;
+  transition-duration: var(--track-ms);
+  transition-timing-function: var(--ease-track);
+}
+
 .grid-selection {
   position: absolute;
   border: 2px solid var(--accent);
