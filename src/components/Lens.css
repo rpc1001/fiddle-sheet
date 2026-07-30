@@ -8,11 +8,17 @@
   box-shadow: var(--shadow-float);
   animation: lens-in 140ms ease-out;
   /* travels with the selection it is reading, on the selection's own curve */
-  transition-property: left, top;
+  transition-property: left, top, opacity;
   transition-duration: var(--travel-ms);
   transition-timing-function: var(--ease-travel);
   /* the answer, not a control: the cells behind it keep every click */
   pointer-events: none;
+}
+
+/* a readout has nothing to say about a move that has not happened yet, and it is
+   sitting on the bands being aimed at */
+.grid:has(.grid-drop) .lens {
+  opacity: 0;
 }
 
 /* the selection is bigger than the window, so there is no edge of it left to

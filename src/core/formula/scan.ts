@@ -16,7 +16,9 @@ export function referenceRange(startText: string, endText: string): Range | null
   return rangeBetween({ row: 0, col: startCol }, { row: ROWS - 1, col: endCol });
 }
 
-const CHUNK = /[A-Za-z]+\d*(?::[A-Za-z]+\d*)?/g;
+// anything shaped like a reference, whole or half typed, and function names too:
+// what it turns out to be is the caller's question
+export const CHUNK = /[A-Za-z]+\d*(?::[A-Za-z]+\d*)?/g;
 
 // every reference in a half-typed formula. the parser cannot help here: "=SUM(B2:B7"
 // is not a formula yet, and the cells still have to light up while it is being typed.

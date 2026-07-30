@@ -7,18 +7,27 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { type Address, cellKey, columnLabel } from "../core/address";
+import { type Address, type CellKey, cellKey, columnLabel } from "../core/address";
 import { acceptsReference, insertReference } from "../core/formula/insert";
 import {
   COLS,
+  GUTTER_WIDTH,
+  HEADER_HEIGHT,
   ROWS,
+  SHEET_HEIGHT,
+  SHEET_WIDTH,
+  type Axis,
   type Zone,
+  coversEveryColumn,
+  coversEveryRow,
   cellAtPoint,
+  gapAtPoint,
   rectOf,
   scrollToShow,
   zoneAtPoint,
 } from "../core/geometry";
 import { cellsIn, rangeAt } from "../core/range";
+import { moveColumns, moveRows } from "../core/sheet/move";
 import {
   type Selection,
   columnSpan,
@@ -29,8 +38,10 @@ import {
 } from "../core/selection";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
 import { getHover, setHover } from "../state/hover";
+import { getMoving, setMoving } from "../state/moving";
 import { getSelection, setSelection } from "../state/selection";
 import { redo, sheet, undo, useCell } from "../state/sheet";
+import { DropLine } from "./Drop";
 import { Editor } from "./Editor";
 import { HoverRing } from "./Hover";
 import { Lens } from "./Lens";
@@ -49,7 +60,7 @@ const STEPS: Record<string, [number, number]> = {
   ArrowRight: [0, 1],
 };
 
-type Drag = "selection" | "reference" | "column" | "row" | null;
+type Drag = "selection" | "reference" | "column" | "row" | "move" | null;
 
 function Cell({ row, col }: { row: number; col: number }) {
   const { display, numeric } = useCell(row, col);
@@ -71,6 +82,14 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   const drag = useRef<Drag>(null);
   const referenceAnchor = useRef<Address | null>(null);
   const referenceFocus = useRef<Address | null>(null);
+  // where in the block it was picked up, so the ghost hangs off the pointer at
+  // the same place the whole way rather than jumping its near edge to it
+  const grabOffset = useRef(0);
+  const pickedBand = useRef(0);
+  const pickedAxis = useRef<Axis>("column");
+  // whether the band has actually been carried anywhere. the ghost appears on
+  // the press, so its presence cannot be what tells a drag from a click.
+  const carried = useRef(false);
 
   // react only honours autoFocus on form controls, so the grid asks for itself
   useEffect(() => gridRef.current?.focus(), [gridRef]);
@@ -106,6 +125,15 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     );
   }
 
+  // how far into the sheet the pointer is along the axis being carried. the grid
+  // is the scrolling content, so its own rect already accounts for the scroll.
+  function alongAxis(event: PointerEvent<HTMLDivElement>, axis: Axis): number {
+    bounds.current ??= gridRef.current!.getBoundingClientRect();
+    return axis === "column"
+      ? event.clientX - bounds.current.left
+      : event.clientY - bounds.current.top;
+  }
+
   // a press on the header, the gutter or the corner selects whole columns or
   // whole rows. shift keeps the band anchored where it started.
   function bandAt(zone: Zone, cell: Address, extend: boolean): Selection {
@@ -113,6 +141,46 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     if (zone === "corner") return columnSpan(0, COLS - 1);
     if (zone === "header") return columnSpan(extend ? anchor.col : cell.col, cell.col);
     return rowSpan(extend ? anchor.row : cell.row, cell.row);
+  }
+
+  // a press on a header or a gutter already inside the band picks the band up
+  // rather than selecting it again, which is the only press with nothing else to
+  // mean. null when the press means something else.
+  function bandPickedUp(zone: Zone, cell: Address): Axis | null {
+    const range = selectionRange(getSelection());
+
+    if (zone === "header" && coversEveryRow(range)) {
+      return cell.col >= range.left && cell.col <= range.right ? "column" : null;
+    }
+    if (zone === "gutter" && coversEveryColumn(range)) {
+      return cell.row >= range.top && cell.row <= range.bottom ? "row" : null;
+    }
+    return null;
+  }
+
+  // the bands keep the order they are dropped in, and the selection follows them
+  // so the block is still the thing under the pointer afterwards. empty bands
+  // write nothing and still move: the block went somewhere either way.
+  function dropBand(axis: Axis, gap: number): void {
+    const before = getSelection();
+    const range = selectionRange(before);
+    const read = (key: CellKey) => sheet.getRaw(key);
+
+    const move =
+      axis === "column"
+        ? moveColumns(read, range.left, range.right, gap)
+        : moveRows(read, range.top, range.bottom, gap);
+
+    // the history entry keeps the band where it was picked up, so undoing puts
+    // both the cells and the selection back where they started
+    if (move.writes.length > 0) sheet.edit(move.writes, before);
+
+    const span = axis === "column" ? range.right - range.left : range.bottom - range.top;
+    setSelection(
+      axis === "column"
+        ? columnSpan(move.start + span, move.start)
+        : rowSpan(move.start + span, move.start),
+    );
   }
 
   function revealFocus(): void {
@@ -162,7 +230,20 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     const cell = cellUnder(event);
     const zone = zoneUnder(event);
 
-    if (zone !== "cell") {
+    const axis = event.shiftKey ? null : bandPickedUp(zone, cell);
+
+    if (axis) {
+      const rect = rectOf(selectionRange(getSelection()));
+      const near = axis === "column" ? rect.left : rect.top;
+      grabOffset.current = alongAxis(event, axis) - near;
+      pickedBand.current = axis === "column" ? cell.col : cell.row;
+      pickedAxis.current = axis;
+      carried.current = false;
+      drag.current = "move";
+      // lifted where it already sits, so the press itself shows the band come
+      // off the sheet rather than nothing at all until the pointer moves
+      setMoving({ axis, offset: near, gap: pickedBand.current });
+    } else if (zone !== "cell") {
       setSelection(bandAt(zone, cell, event.shiftKey));
       drag.current = zone === "corner" ? null : zone === "header" ? "column" : "row";
     } else if (writeReference(cell, event.shiftKey)) {
@@ -189,6 +270,25 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
 
     if (!drag.current) return;
 
+    // the line only appears once the pointer has picked a boundary, so a press
+    // and release on a band that never moved leaves the sheet alone
+    if (drag.current === "move") {
+      const axis = pickedAxis.current;
+      const rect = rectOf(selectionRange(getSelection()));
+      const [edge, extent, end] =
+        axis === "column"
+          ? [GUTTER_WIDTH, rect.width, SHEET_WIDTH]
+          : [HEADER_HEIGHT, rect.height, SHEET_HEIGHT];
+
+      const along = alongAxis(event, axis);
+      const offset = Math.max(edge, Math.min(along - grabOffset.current, end - extent));
+      carried.current = true;
+      // the block lands where its own near edge is nearest, so the ghost and the
+      // line agree about what is being aimed at
+      setMoving({ axis, offset, gap: gapAtPoint(offset, axis) });
+      return;
+    }
+
     // pointermove fires many times per cell, and rewriting the same reference
     // re-parses and re-evaluates the whole draft on each one
     if (drag.current === "reference") {
@@ -212,10 +312,28 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     setSelection({ anchor: selection.anchor, focus: cell });
   }
 
-  // pointercancel too: a lost capture would otherwise leave the selection
-  // following a mouse that is no longer held
   function endDrag(): void {
+    const carry = getMoving();
+
+    // a press that never moved is a click, and a click on a header or a gutter
+    // selects that one band: without this a block swallows every press inside it
+    // and picking a single column or row out of one becomes impossible
+    if (drag.current === "move") {
+      const band = pickedBand.current;
+      if (carried.current && carry) dropBand(carry.axis, carry.gap);
+      else if (pickedAxis.current === "column") setSelection(columnSpan(band, band));
+      else setSelection(rowSpan(band, band));
+    }
+
+    cancelDrag();
+  }
+
+  // pointercancel too: a lost capture would otherwise leave the selection
+  // following a mouse that is no longer held, and a half finished move is not a
+  // move, so it drops nothing
+  function cancelDrag(): void {
     drag.current = null;
+    setMoving(null);
   }
 
   function openEditor(cell: Address): void {
@@ -273,7 +391,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
-        onPointerCancel={endDrag}
+        onPointerCancel={cancelDrag}
         onPointerLeave={() => setHover(null)}
         onDoubleClick={onDoubleClick}
         onKeyDown={onKeyDown}
@@ -293,6 +411,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
           </Fragment>
         ))}
         <TraceOverlay />
+        <DropLine />
         <HoverRing />
         <SelectionOverlay />
         <Lens viewport={viewport} />

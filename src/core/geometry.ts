@@ -51,6 +51,31 @@ export function zoneAtPoint(x: number, y: number): Zone {
   return x < GUTTER_WIDTH ? "gutter" : "cell";
 }
 
+export type Axis = "column" | "row";
+
+// where a band's track starts and how far apart its boundaries sit. columns run
+// across from the gutter, rows run down from the header, and everything else
+// about a move is the same on either axis.
+function track(axis: Axis): { start: number; size: number; count: number } {
+  return axis === "column"
+    ? { start: GUTTER_WIDTH, size: COL_WIDTH, count: COLS }
+    : { start: HEADER_HEIGHT, size: ROW_HEIGHT, count: ROWS };
+}
+
+// the boundaries between bands, numbered the way a move names its target: 0 is
+// before the first, COLS or ROWS is after the last, and n is between n-1 and n
+export function gapOffset(gap: number, axis: Axis): number {
+  const { start, size } = track(axis);
+  return start + gap * size;
+}
+
+// the nearest boundary to a point, so a drop lands where the pointer is closest
+// rather than where the band it happens to be over begins
+export function gapAtPoint(along: number, axis: Axis): number {
+  const { start, size, count } = track(axis);
+  return Math.max(0, Math.min(count, Math.round((along - start) / size)));
+}
+
 export type Viewport = { scrollLeft: number; scrollTop: number; width: number; height: number };
 
 // the smallest scroll change that brings a rect fully into view. the header and

@@ -9,6 +9,8 @@ import {
   SHEET_HEIGHT,
   SHEET_WIDTH,
   cellAtPoint,
+  gapAtPoint,
+  gapOffset,
   fitsAbove,
   fitsBelow,
   fitsLeft,
@@ -262,5 +264,42 @@ describe("keepAcross and keepDown", () => {
   it("measures from the scrolled window", () => {
     expect(keepAcross(1000, 236, 18, { ...view, scrollLeft: 300 })).toBe(300 + view.width - 18 - 236);
     expect(keepDown(1000, 108, 18, { ...view, scrollTop: 300 })).toBe(300 + view.height - 18 - 108);
+  });
+});
+
+describe("column gaps", () => {
+  it("numbers the boundaries from before the first column to after the last", () => {
+    expect(gapOffset(0, "column")).toBe(GUTTER_WIDTH);
+    expect(gapOffset(1, "column")).toBe(GUTTER_WIDTH + COL_WIDTH);
+    expect(gapOffset(COLS, "column")).toBe(GUTTER_WIDTH + COLS * COL_WIDTH);
+  });
+
+  it("takes the nearest boundary to a point, not the column it is over", () => {
+    expect(gapAtPoint(GUTTER_WIDTH + COL_WIDTH * 0.4, "column")).toBe(0);
+    expect(gapAtPoint(GUTTER_WIDTH + COL_WIDTH * 0.6, "column")).toBe(1);
+    expect(gapAtPoint(GUTTER_WIDTH + COL_WIDTH * 1.5, "column")).toBe(2);
+  });
+
+  it("clamps to the sheet, so a drag off either edge still drops somewhere", () => {
+    expect(gapAtPoint(-500, "column")).toBe(0);
+    expect(gapAtPoint(GUTTER_WIDTH + COLS * COL_WIDTH + 500, "column")).toBe(COLS);
+  });
+});
+
+describe("row gaps", () => {
+  it("runs down from the header the way columns run across from the gutter", () => {
+    expect(gapOffset(0, "row")).toBe(HEADER_HEIGHT);
+    expect(gapOffset(1, "row")).toBe(HEADER_HEIGHT + ROW_HEIGHT);
+    expect(gapOffset(ROWS, "row")).toBe(HEADER_HEIGHT + ROWS * ROW_HEIGHT);
+  });
+
+  it("takes the nearest boundary to a point", () => {
+    expect(gapAtPoint(HEADER_HEIGHT + ROW_HEIGHT * 0.4, "row")).toBe(0);
+    expect(gapAtPoint(HEADER_HEIGHT + ROW_HEIGHT * 0.6, "row")).toBe(1);
+  });
+
+  it("clamps to the sheet", () => {
+    expect(gapAtPoint(-500, "row")).toBe(0);
+    expect(gapAtPoint(HEADER_HEIGHT + ROWS * ROW_HEIGHT + 500, "row")).toBe(ROWS);
   });
 });
