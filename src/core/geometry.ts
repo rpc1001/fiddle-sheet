@@ -63,17 +63,6 @@ export function fitsBelow(rect: Rect, height: number, gap: number, view: Viewpor
   return rect.top + rect.height + gap + height <= view.scrollTop + view.height;
 }
 
-// the rows worth mounting. a few either side of the window so a scroll has
-// something to show before react catches up.
-const OVERSCAN = 4;
-
-export function visibleRows(scrollTop: number, height: number): { first: number; last: number } {
-  const first = Math.floor((scrollTop - HEADER_HEIGHT) / ROW_HEIGHT) - OVERSCAN;
-  const last = Math.floor((scrollTop + height - HEADER_HEIGHT) / ROW_HEIGHT) + OVERSCAN;
-
-  return { first: clamp(first, ROWS), last: clamp(last, ROWS) };
-}
-
 export function rectOf(range: Range): Rect {
   return {
     left: GUTTER_WIDTH + range.left * COL_WIDTH,

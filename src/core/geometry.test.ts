@@ -11,7 +11,6 @@ import {
   fitsRight,
   rectOf,
   scrollToShow,
-  visibleRows,
 } from "./geometry";
 import { rangeBetween } from "./range";
 
@@ -108,28 +107,6 @@ describe("scrollToShow", () => {
   it("puts the first cell at the origin", () => {
     const next = scrollToShow(cellRect(0, 0), { ...view, scrollLeft: 400, scrollTop: 400 });
     expect(next).toMatchObject({ scrollLeft: 0, scrollTop: 0 });
-  });
-});
-
-describe("visibleRows", () => {
-  it("starts at the first row when the sheet is scrolled to the top", () => {
-    expect(visibleRows(0, 300).first).toBe(0);
-  });
-
-  it("covers the rows the window can show", () => {
-    const { first, last } = visibleRows(0, 300);
-    expect(last).toBeGreaterThanOrEqual(300 / ROW_HEIGHT - 1);
-    expect(last - first).toBeLessThan(ROWS);
-  });
-
-  it("moves the window down with the scroll", () => {
-    const { first, last } = visibleRows(1500, 300);
-    expect(first).toBeLessThanOrEqual(1500 / ROW_HEIGHT - 1);
-    expect(last).toBeGreaterThanOrEqual(1800 / ROW_HEIGHT - 1);
-  });
-
-  it("never runs past the last row", () => {
-    expect(visibleRows(100_000, 300).last).toBe(ROWS - 1);
   });
 });
 

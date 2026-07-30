@@ -1,17 +1,15 @@
 import {
-  type CSSProperties,
+  Fragment,
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
   type RefObject,
-  useCallback,
   useEffect,
   useRef,
-  useState,
 } from "react";
 import { type Address, cellKey, columnLabel } from "../core/address";
 import { acceptsReference, insertReference } from "../core/formula/insert";
-import { COLS, cellAtPoint, rectOf, scrollToShow, visibleRows } from "../core/geometry";
+import { COLS, ROWS, cellAtPoint, rectOf, scrollToShow } from "../core/geometry";
 import { cellsIn, rangeAt } from "../core/range";
 import { moved, sameCell, selectionRange } from "../core/selection";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
@@ -25,6 +23,7 @@ import { viewportBox } from "./viewport";
 import "./Grid.css";
 
 const columns = Array.from({ length: COLS }, (_, col) => col);
+const rows = Array.from({ length: ROWS }, (_, row) => row);
 
 const STEPS: Record<string, [number, number]> = {
   ArrowUp: [-1, 0],
@@ -35,31 +34,10 @@ const STEPS: Record<string, [number, number]> = {
 
 type Drag = "selection" | "reference" | null;
 
-function Cell({ row, col, style }: { row: number; col: number; style: CSSProperties }) {
+function Cell({ row, col }: { row: number; col: number }) {
   const { display, numeric } = useCell(row, col);
 
-  return (
-    <div className={numeric ? "grid-cell is-numeric" : "grid-cell"} style={style}>
-      {display}
-    </div>
-  );
-}
-
-// only the rows in the window are mounted, so each one says where it belongs
-// rather than being placed by the order it was written in
-function Row({ row }: { row: number }) {
-  const style = { gridRow: row + 2 };
-
-  return (
-    <>
-      <div className="grid-gutter" style={style}>
-        {row + 1}
-      </div>
-      {columns.map((col) => (
-        <Cell key={col} row={row} col={col} style={style} />
-      ))}
-    </>
-  );
+  return <div className={numeric ? "grid-cell is-numeric" : "grid-cell"}>{display}</div>;
 }
 
 function isTyping(event: KeyboardEvent): boolean {
@@ -75,28 +53,9 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   const drag = useRef<Drag>(null);
   const referenceAnchor = useRef<Address | null>(null);
   const referenceFocus = useRef<Address | null>(null);
-  // 2600 cells is 2600 subscriptions and 2600 nodes, and about thirty of them
-  // are ever on screen. the window is a guess until the box has been measured.
-  const [rowWindow, setRowWindow] = useState(() => visibleRows(0, globalThis.innerHeight));
-
-  const measureWindow = useCallback(() => {
-    const box = viewport.current;
-    if (!box) return;
-
-    const next = visibleRows(box.scrollTop, box.clientHeight);
-    setRowWindow((current) =>
-      current.first === next.first && current.last === next.last ? current : next,
-    );
-  }, []);
 
   // react only honours autoFocus on form controls, so the grid asks for itself
   useEffect(() => gridRef.current?.focus(), [gridRef]);
-
-  useEffect(() => {
-    measureWindow();
-    globalThis.addEventListener("resize", measureWindow);
-    return () => globalThis.removeEventListener("resize", measureWindow);
-  }, [measureWindow]);
 
   function cellUnder(event: { clientX: number; clientY: number }): Address {
     const bounds = gridRef.current!.getBoundingClientRect();
@@ -232,13 +191,8 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     event.preventDefault();
   }
 
-  const mounted = Array.from(
-    { length: rowWindow.last - rowWindow.first + 1 },
-    (_, at) => rowWindow.first + at,
-  );
-
   return (
-    <div className="grid-viewport" ref={viewport} onScroll={measureWindow}>
+    <div className="grid-viewport" ref={viewport}>
       <div
         className="grid"
         ref={gridRef}
@@ -256,8 +210,13 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
             {columnLabel(col)}
           </div>
         ))}
-        {mounted.map((row) => (
-          <Row key={row} row={row} />
+        {rows.map((row) => (
+          <Fragment key={row}>
+            <div className="grid-gutter">{row + 1}</div>
+            {columns.map((col) => (
+              <Cell key={col} row={row} col={col} />
+            ))}
+          </Fragment>
         ))}
         <TraceOverlay />
         <SelectionOverlay />

@@ -6,8 +6,6 @@
   grid-template-rows: var(--header-h);
   grid-auto-rows: var(--row-h);
   width: max-content;
-  /* only the visible rows are mounted, so the scroll extent is stated, not grown */
-  height: var(--sheet-h);
 }
 
 .grid-corner,
