@@ -29,10 +29,14 @@ export function rippleDelay(index: number, length: number): number {
   return index * step;
 }
 
+// the stylesheet asks the same question of the tokens. the pulse is motion and
+// nothing else, so honouring the setting means dropping it rather than shortening it
+const stillness = window.matchMedia("(prefers-reduced-motion: reduce)");
+
 sheet.onRecalc(({ order, connected }) => {
   // a cell that only recomputed itself has no chain to follow, so nothing plays
   const downstream = order.length > 1 ? order : [];
-  if (downstream.length === 0 && connected.length === 0) {
+  if (stillness.matches || (downstream.length === 0 && connected.length === 0)) {
     store.set(EMPTY);
     return;
   }
