@@ -1,0 +1,20 @@
+:root {
+  --ink-rgb: 20 17 13;
+
+  --paper: #fffdf9;
+  --ink: rgb(var(--ink-rgb));
+  --ink-cell: #26221c;
+  --ink-36: rgb(var(--ink-rgb) / 0.36);
+  --ink-30: rgb(var(--ink-rgb) / 0.3);
+
+  --rule-header: rgb(var(--ink-rgb) / 0.13);
+  --rule-row: rgb(var(--ink-rgb) / 0.055);
+  --rule-col: rgb(var(--ink-rgb) / 0.045);
+
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --text-cell: 13px;
+  --text-label: 10px;
+  --tracking-label: 0.16em;
+}

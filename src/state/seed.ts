@@ -1,0 +1,35 @@
+import { type CellKey, cellKey } from "../core/address";
+
+const rows: [number, number, string][] = [
+  [0, 0, "Category"],
+  [0, 1, "Budget"],
+  [0, 2, "Actual"],
+  [1, 0, "Rent"],
+  [1, 1, "2400"],
+  [1, 2, "2400"],
+  [2, 0, "Groceries"],
+  [2, 1, "640"],
+  [2, 2, "712"],
+  [3, 0, "Utilities"],
+  [3, 1, "180"],
+  [3, 2, "164"],
+  [4, 0, "Transport"],
+  [4, 1, "120"],
+  [4, 2, "98"],
+  [5, 0, "Dining"],
+  [5, 1, "260"],
+  [5, 2, "331"],
+  [6, 0, "Health"],
+  [6, 1, "95"],
+  [6, 2, "95"],
+  [7, 0, "Total"],
+  [7, 1, "=SUM(B2:B7)"],
+  [7, 2, "=SUM(C2:C7)"],
+  [8, 0, "Average"],
+  [8, 1, "=AVERAGE(B2:B7)"],
+  [8, 2, "=AVERAGE(C2:C7)"],
+  [9, 0, "Difference"],
+  [9, 1, "=C8-B8"],
+];
+
+export const seed: [CellKey, string][] = rows.map(([row, col, raw]) => [cellKey(row, col), raw]);
