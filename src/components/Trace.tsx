@@ -1,6 +1,7 @@
 import { type CSSProperties, useMemo } from "react";
 import { type Address, type CellKey, addressOf, cellKey } from "../core/address";
 import { blocks } from "../core/blocks";
+import { isError } from "../core/formula/errors";
 import { draftReferences } from "../core/formula/scan";
 import { rectOf } from "../core/geometry";
 import { type Range, isSingleCell, rangeAt, rangeLabel } from "../core/range";
@@ -11,8 +12,25 @@ import { useSelection } from "../state/selection";
 import { sheet, useSheetRevision } from "../state/sheet";
 import "./Trace.css";
 
-type Kind = "input" | "output";
+type Kind = "input" | "output" | "blame";
 type Mark = { key: string; range: Range; depth: number; kind: Kind };
+
+const CLASS: Record<Kind, string> = {
+  input: "trace-mark is-input",
+  output: "trace-mark is-output",
+  blame: "trace-mark is-blame",
+};
+
+// the cell an error came from, when the cell you are on is reporting one. it
+// stands in for the inputs rather than joining them: a formula over a range
+// reads dozens of cells and exactly one of them is the thing to go and fix.
+function blameMark(at: CellKey): Mark | null {
+  const value = sheet.getValue(at);
+  if (!isError(value) || !value.blame) return null;
+
+  const range = rangeAt(value.blame);
+  return { key: `blame-${rangeLabel(range)}`, range, depth: 1, kind: "blame" };
+}
 
 function boxOf(key: CellKey): CSSProperties {
   return rectOf(rangeAt(addressOf(key)));
@@ -42,7 +60,7 @@ function markElements(marks: Mark[]) {
   return marks.map((mark) => (
     <div
       key={mark.key}
-      className={mark.kind === "input" ? "trace-mark is-input" : "trace-mark is-output"}
+      className={CLASS[mark.kind]}
       style={{ ...rectOf(mark.range), "--depth": mark.depth } as CSSProperties}
     />
   ));
@@ -71,7 +89,10 @@ function Marks({ open }: { open: Address | null }) {
     // an open cell reads whatever its draft names, which the draft marks
     // already show and which changes on every keystroke. what reads the cell
     // cannot change until the edit lands, so that half stays where it is.
-    return drafting ? read : [...marksFor(inputs, "input"), ...read];
+    if (drafting) return read;
+
+    const blame = blameMark(at);
+    return [...(blame ? [blame] : marksFor(inputs, "input")), ...read];
   }, [at, revision, drafting]);
 
   if (!marks) return null;

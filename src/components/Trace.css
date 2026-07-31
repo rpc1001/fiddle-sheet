@@ -35,6 +35,14 @@
   box-shadow: inset 0 0 0 1px rgb(var(--flow-rgb) / 0.3);
 }
 
+/* the one cell to go and fix, so it is the one mark that draws its own edge
+   rather than tinting what is under it: an error is not a relation the sheet
+   has, it is a thing that is wrong with it */
+.trace-mark.is-blame {
+  background: rgb(var(--blame-rgb) / 0.1);
+  box-shadow: inset 0 0 0 1.5px var(--blame);
+}
+
 /* the same two colours moving: orange is what a cell reads, teal is what reads it */
 .trace-pulse {
   border-radius: var(--radius-md);

@@ -23,6 +23,14 @@
   /* the other direction of a dependency: cells that read the one you are on */
   --flow-rgb: 22 104 118;
 
+  /* the cell an error came from. its own colour because the accent already means
+     "this is read by the cell you are on", and the culprit is not one of those:
+     it is the one to go and fix. */
+  /* light enough to hold up on the dark lens and dark enough to hold up on the
+     paper, since the sentence and the mark it goes with sit on opposite grounds */
+  --blame-rgb: 209 48 44;
+  --blame: rgb(var(--blame-rgb));
+
   --edge: rgb(var(--ink-rgb) / 0.09);
   --edge-soft: rgb(var(--ink-rgb) / 0.07);
   --edge-faint: rgb(var(--ink-rgb) / 0.12);
