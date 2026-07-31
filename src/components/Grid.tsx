@@ -10,6 +10,7 @@ import {
 } from "react";
 import { type Address, type CellKey, cellKey, columnLabel } from "../core/address";
 import { clipText, copyClip, parseClip, pasteWrites, pastedRange } from "../core/clipboard";
+import { droppedFormula } from "../core/drop";
 import { fillWrites } from "../core/entry";
 import { fillExtent } from "../core/fill";
 import { acceptsReference, insertReference } from "../core/formula/insert";
@@ -32,7 +33,7 @@ import {
   scrollToShow,
   zoneAtPoint,
 } from "../core/geometry";
-import { type Range, cellsIn, rangeAt, sameRange } from "../core/range";
+import { type Range, cellsIn, contains, isSingleCell, rangeAt, sameRange } from "../core/range";
 import { moveColumns, moveRows } from "../core/sheet/move";
 import {
   type Selection,
@@ -49,9 +50,10 @@ import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
 import { applyFill, clearOffer, getFilling, getOffer, setFilling } from "../state/filling";
 import { getHover, setHover } from "../state/hover";
 import { getMoving, setMoving } from "../state/moving";
+import { getQuoting, setQuoting } from "../state/quoting";
 import { getSelection, setSelection } from "../state/selection";
-import { redo, sheet, undo, useCell } from "../state/sheet";
-import { DropLine } from "./Drop";
+import { rangeValues, redo, sheet, undo, useCell } from "../state/sheet";
+import { DropLine, QuoteGhost } from "./Drop";
 import { Editor } from "./Editor";
 import { HoverRing } from "./Hover";
 import { Lens } from "./Lens";
@@ -70,7 +72,16 @@ const STEPS: Record<string, [number, number]> = {
   ArrowRight: [0, 1],
 };
 
-type Drag = "selection" | "reference" | "column" | "row" | "move" | "fill" | "pan" | null;
+type Drag =
+  | "selection"
+  | "reference"
+  | "column"
+  | "row"
+  | "move"
+  | "fill"
+  | "pan"
+  | "quote"
+  | null;
 
 function Cell({ row, col }: { row: number; col: number }) {
   const { display, numeric } = useCell(row, col);
@@ -121,6 +132,14 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   // and resize can move it, so it is measured again after those and not per move.
   function forgetBounds(): void {
     bounds.current = null;
+  }
+
+  // a point in the sheet's own coordinates, which is what the overlays are
+  // positioned in. the grid is the scrolling content, so its rect has the
+  // scroll in it already.
+  function pointIn(event: { clientX: number; clientY: number }): { x: number; y: number } {
+    bounds.current ??= gridRef.current!.getBoundingClientRect();
+    return { x: event.clientX - bounds.current.left, y: event.clientY - bounds.current.top };
   }
 
   function cellUnder(event: { clientX: number; clientY: number }): Address {
@@ -275,6 +294,25 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     const cell = cellUnder(event);
     const zone = zoneUnder(event);
 
+    // a block carried to a cell writes the formula that reads it. only from
+    // inside the block, and only when there is something to total: the gesture
+    // offers a sum, and a range of words has none, so it stays an ordinary drag.
+    if (event.altKey && zone === "cell") {
+      const range = selectionRange(getSelection());
+      const quoted =
+        !isSingleCell(range) && contains(range, cell)
+          ? droppedFormula(rangeValues(range), range)
+          : null;
+
+      if (quoted) {
+        event.preventDefault();
+        setQuoting({ ...pointIn(event), text: quoted, onto: null });
+        drag.current = "quote";
+        event.currentTarget.setPointerCapture(event.pointerId);
+        return;
+      }
+    }
+
     const axis = event.shiftKey ? null : bandPickedUp(zone, cell);
 
     if (axis) {
@@ -313,6 +351,17 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
       const view = viewport.current!;
       view.scrollLeft = panFrom.current.x - event.clientX;
       view.scrollTop = panFrom.current.y - event.clientY;
+      return;
+    }
+
+    // the block is over a cell or over itself, and over itself it lands nowhere:
+    // a range cannot be totalled into one of its own cells without reading what
+    // it is about to write
+    if (drag.current === "quote") {
+      const carrying = getQuoting()!;
+      const onto = cellUnder(event);
+      const range = selectionRange(getSelection());
+      setQuoting({ ...carrying, ...pointIn(event), onto: contains(range, onto) ? null : onto });
       return;
     }
 
@@ -377,6 +426,13 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   function endDrag(): void {
     const carry = getMoving();
     const reach = getFilling();
+    const quote = getQuoting();
+
+    // the formula arrives open rather than written: the range and the function
+    // are both stated, and the one that was guessed is the one the caret is in
+    if (drag.current === "quote" && quote?.onto) {
+      startEditing(quote.onto, quote.text);
+    }
 
     // a handle pressed and released without travelling reaches nothing, and
     // applyFill has nothing to write
@@ -405,6 +461,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     drag.current = null;
     setMoving(null);
     setFilling(null);
+    setQuoting(null);
   }
 
   function openEditor(cell: Address): void {
@@ -562,6 +619,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         ))}
         <TraceOverlay />
         <DropLine />
+        <QuoteGhost />
         <HoverRing grid={gridRef} />
         <SelectionOverlay />
         <Lens viewport={viewport} />

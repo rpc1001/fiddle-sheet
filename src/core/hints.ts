@@ -8,7 +8,7 @@ export type Hint = { keys: string; label: string };
 export type List = "none" | "showing" | "taking";
 
 export type Doing =
-  | { kind: "selecting"; multi: boolean; empty: boolean }
+  | { kind: "selecting"; multi: boolean; empty: boolean; numbers: boolean }
   | { kind: "editing"; formula: boolean; list: List };
 
 const SAVE: Hint = { keys: "↵", label: "save" };
@@ -37,6 +37,11 @@ export function hintsFor(doing: Doing): Hint[] {
   }
 
   if (doing.multi) {
+    // the drag is the one thing here nobody arrives knowing, and it is only
+    // worth saying while the block holds something a total could be taken of
+    if (doing.numbers) {
+      return [{ keys: "⌥ drag", label: "total" }, { keys: "⇧ arrows", label: "resize" }, CLEAR];
+    }
     return [{ keys: "⇧ arrows", label: "resize" }, CLEAR];
   }
 

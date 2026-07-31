@@ -5,15 +5,26 @@ const keys = (hints: { keys: string }[]): string[] => hints.map((hint) => hint.k
 
 describe("hintsFor", () => {
   it("offers a way in on an empty cell", () => {
-    expect(keys(hintsFor({ kind: "selecting", multi: false, empty: true }))).toEqual(["type", "="]);
+    expect(keys(hintsFor({ kind: "selecting", multi: false, empty: true, numbers: false }))).toEqual(["type", "="]);
   });
 
   it("offers edit and clear once the cell holds something", () => {
-    expect(keys(hintsFor({ kind: "selecting", multi: false, empty: false }))).toEqual(["↵", "⌫"]);
+    expect(keys(hintsFor({ kind: "selecting", multi: false, empty: false, numbers: false }))).toEqual(["↵", "⌫"]);
+  });
+
+  it("offers the drag only while the block holds numbers to total", () => {
+    expect(keys(hintsFor({ kind: "selecting", multi: true, empty: false, numbers: true }))).toEqual([
+      "⌥ drag",
+      "⇧ arrows",
+      "⌫",
+    ]);
+    expect(
+      keys(hintsFor({ kind: "selecting", multi: true, empty: false, numbers: false })),
+    ).not.toContain("⌥ drag");
   });
 
   it("talks about the whole range when more than one cell is selected", () => {
-    expect(keys(hintsFor({ kind: "selecting", multi: true, empty: false }))).toEqual([
+    expect(keys(hintsFor({ kind: "selecting", multi: true, empty: false, numbers: false }))).toEqual([
       "⇧ arrows",
       "⌫",
     ]);
@@ -43,9 +54,10 @@ describe("hintsFor", () => {
 
   it("keeps every label to a word or two", () => {
     const every = [
-      hintsFor({ kind: "selecting", multi: false, empty: true }),
-      hintsFor({ kind: "selecting", multi: false, empty: false }),
-      hintsFor({ kind: "selecting", multi: true, empty: false }),
+      hintsFor({ kind: "selecting", multi: false, empty: true, numbers: false }),
+      hintsFor({ kind: "selecting", multi: false, empty: false, numbers: false }),
+      hintsFor({ kind: "selecting", multi: true, empty: false, numbers: false }),
+      hintsFor({ kind: "selecting", multi: true, empty: false, numbers: true }),
       hintsFor({ kind: "editing", formula: true, list: "none" }),
       hintsFor({ kind: "editing", formula: false, list: "none" }),
       hintsFor({ kind: "editing", formula: true, list: "showing" }),
@@ -56,9 +68,10 @@ describe("hintsFor", () => {
 
   it("never shows more than three", () => {
     const every = [
-      hintsFor({ kind: "selecting", multi: false, empty: true }),
-      hintsFor({ kind: "selecting", multi: false, empty: false }),
-      hintsFor({ kind: "selecting", multi: true, empty: false }),
+      hintsFor({ kind: "selecting", multi: false, empty: true, numbers: false }),
+      hintsFor({ kind: "selecting", multi: false, empty: false, numbers: false }),
+      hintsFor({ kind: "selecting", multi: true, empty: false, numbers: false }),
+      hintsFor({ kind: "selecting", multi: true, empty: false, numbers: true }),
       hintsFor({ kind: "editing", formula: true, list: "none" }),
       hintsFor({ kind: "editing", formula: false, list: "none" }),
       hintsFor({ kind: "editing", formula: true, list: "showing" }),

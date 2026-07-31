@@ -51,3 +51,12 @@ export function* cellsIn(range: Range): Generator<Address> {
     }
   }
 }
+
+export function contains(range: Range, cell: Address): boolean {
+  return (
+    cell.row >= range.top &&
+    cell.row <= range.bottom &&
+    cell.col >= range.left &&
+    cell.col <= range.right
+  );
+}

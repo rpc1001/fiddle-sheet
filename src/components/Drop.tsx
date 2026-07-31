@@ -1,7 +1,9 @@
 import { columnLabel } from "../core/address";
-import { COL_WIDTH, ROW_HEIGHT, gapOffset } from "../core/geometry";
+import { COL_WIDTH, ROW_HEIGHT, gapOffset, rectOf } from "../core/geometry";
+import { rangeAt } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { useMoving } from "../state/moving";
+import { useQuoting } from "../state/quoting";
 import { useSelection } from "../state/selection";
 
 // what is being carried and where it would land. the ghost tracks the pointer
@@ -47,4 +49,29 @@ export function DropLine() {
 
 function bandLabel(first: string, last: string): string {
   return first === last ? first : `${first}:${last}`;
+}
+
+// the formula a carried block would write, hanging off the pointer, and the
+// cell it would be written into. the text is the whole affordance: it says
+// what is about to happen in the language the cell will hold, so the gesture
+// teaches the formula rather than just performing it.
+export function QuoteGhost() {
+  const quote = useQuoting();
+  if (!quote) return null;
+
+  const target = quote.onto ? rectOf(rangeAt(quote.onto)) : null;
+
+  return (
+    <>
+      {target && (
+        <div
+          className="grid-quote-target"
+          style={{ left: target.left, top: target.top, width: target.width, height: target.height }}
+        />
+      )}
+      <div className="grid-quote-ghost" style={{ left: quote.x, top: quote.y }}>
+        {quote.text}
+      </div>
+    </>
+  );
 }

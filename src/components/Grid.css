@@ -482,3 +482,34 @@
   height: 100%;
   width: var(--gutter-w);
 }
+
+/* the formula in the hand, in the face the cell will hold it in. it hangs off
+   the pointer rather than under it so the cell being aimed at stays readable,
+   and it takes no transition: it stands in for the hand, and a hand does not
+   settle. */
+.grid-quote-ghost {
+  position: absolute;
+  z-index: 4;
+  margin: 14px 0 0 14px;
+  padding: 5px 9px;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  border: 1.5px solid var(--edge-faint);
+  box-shadow: var(--shadow-lift);
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  color: var(--ink);
+}
+
+/* where it would land. the accent, because this is the one cell the drop is
+   about to change, and dashed until it is let go. */
+.grid-quote-target {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+}

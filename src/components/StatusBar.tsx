@@ -4,9 +4,10 @@ import { bandOf } from "../core/geometry";
 import { type Doing, type List, hintsFor } from "../core/hints";
 import { isSingleCell } from "../core/range";
 import { selectionRange } from "../core/selection";
+import { summarize } from "../core/summary";
 import { offered, useEditing } from "../state/editing";
 import { useSelection } from "../state/selection";
-import { sheet, useSheetRevision } from "../state/sheet";
+import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
 import { Odometer } from "./Odometer";
 import { chordLabel } from "./platform";
 import "./StatusBar.css";
@@ -57,6 +58,7 @@ export function StatusBar() {
         kind: "selecting",
         multi: !isSingleCell(range),
         empty: behind === "",
+        numbers: summarize(rangeValues(range)).numbers !== null,
       };
 
   // only while the key would actually do something, so the pill never teaches a
