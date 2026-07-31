@@ -208,7 +208,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
 
     // the history entry keeps the band where it was picked up, so undoing puts
     // both the cells and the selection back where they started
-    if (move.writes.length > 0) sheet.edit(move.writes, before);
+    if (move.writes.length > 0) sheet.edit(move.writes, before, "move");
 
     const span = axis === "column" ? range.right - range.left : range.bottom - range.top;
     setSelection(
@@ -494,7 +494,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     const into = selectionRange(getSelection());
     const at = { row: into.top, col: into.left };
 
-    sheet.edit(pasteWrites(clip, rows, at), getSelection());
+    sheet.edit(pasteWrites(clip, rows, at), getSelection(), "paste");
 
     const landed = pastedRange(at, rows.length, rows[0]?.length ?? 0);
     setSelection({
@@ -540,7 +540,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
       // far it reaches, which is the one thing a key press can say that a drag
       // has to be told: it is already on screen.
       const axis = isChord(event, "d") ? "down" : "right";
-      sheet.edit(fillWrites(sheet.getRaw, selectionRange(selection), axis), selection);
+      sheet.edit(fillWrites(sheet.getRaw, selectionRange(selection), axis), selection, "fill");
     } else if (event.key === " " && (event.ctrlKey || event.shiftKey)) {
       // the bands the selection already spans, named by the axis rather than
       // dragged along the header
@@ -558,6 +558,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
       sheet.edit(
         cleared.map((cell) => [cellKey(cell.row, cell.col), ""]),
         selection,
+        "clear",
       );
     } else if (event.key === "Escape") {
       // one press puts down one thing, the most recent first. the fill is

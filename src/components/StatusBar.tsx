@@ -9,7 +9,6 @@ import { offered, useEditing } from "../state/editing";
 import { useSelection } from "../state/selection";
 import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
 import { Odometer } from "./Odometer";
-import { chordLabel } from "./platform";
 import "./StatusBar.css";
 
 function behindClass(behind: string, formula: boolean): string {
@@ -61,13 +60,6 @@ export function StatusBar() {
         numbers: summarize(rangeValues(range)).numbers !== null,
       };
 
-  // only while the key would actually do something, so the pill never teaches a
-  // shortcut that is currently dead
-  const history = [
-    { keys: chordLabel("Z"), label: "undo", live: sheet.canUndo() },
-    { keys: chordLabel("Y"), label: "redo", live: sheet.canRedo() },
-  ].filter((hint) => hint.live);
-
   const hints = hintsFor(doing);
   const formula = behind.startsWith("=");
   const single = isSingleCell(range);
@@ -94,12 +86,6 @@ export function StatusBar() {
             </span>
           ))}
         </span>
-        {history.map((hint) => (
-          <span key={hint.label} className="status-hint">
-            <kbd className="status-keys">{hint.keys}</kbd>
-            {hint.label}
-          </span>
-        ))}
       </div>
     </div>
   );

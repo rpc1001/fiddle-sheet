@@ -16,7 +16,7 @@ function sheetOf(cells: Record<string, string> = {}) {
     display: (address: string) => sheet.getDisplay(at(address)),
     set(address: string, raw: string) {
       const parsed = parseAddress(address)!;
-      sheet.edit([[at(address), raw]], selectionAt(parsed));
+      sheet.edit([[at(address), raw]], selectionAt(parsed), "type");
     },
   };
 }
@@ -167,8 +167,8 @@ describe("store", () => {
 describe("undo and redo", () => {
   it("has nothing to undo on a fresh sheet", () => {
     const { sheet } = sheetOf({ A1: "1" });
-    expect(sheet.canUndo()).toBe(false);
-    expect(sheet.canRedo()).toBe(false);
+    expect(sheet.peekUndo()).toBeNull();
+    expect(sheet.peekRedo()).toBeNull();
   });
 
   it("does not count seeding as an edit", () => {
@@ -222,6 +222,7 @@ describe("undo and redo", () => {
         [at("A3"), ""],
       ],
       selectionAt({ row: 0, col: 0 }),
+      "clear",
     );
     expect(display("A1")).toBe("");
 
@@ -252,7 +253,7 @@ describe("undo and redo", () => {
     sheet.undo();
     set("A1", "other");
 
-    expect(sheet.canRedo()).toBe(false);
+    expect(sheet.peekRedo()).toBeNull();
     sheet.redo();
     expect(display("A1")).toBe("other");
   });
@@ -260,16 +261,16 @@ describe("undo and redo", () => {
   it("ignores an edit that changes nothing", () => {
     const { sheet, set } = sheetOf({ A1: "1" });
     set("A1", "1");
-    expect(sheet.canUndo()).toBe(false);
+    expect(sheet.peekUndo()).toBeNull();
   });
 
   it("reports what is available as the stack moves", () => {
     const { sheet, set } = sheetOf();
     set("A1", "x");
-    expect([sheet.canUndo(), sheet.canRedo()]).toEqual([true, false]);
+    expect([sheet.peekUndo(), sheet.peekRedo()].map(Boolean)).toEqual([true, false]);
 
     sheet.undo();
-    expect([sheet.canUndo(), sheet.canRedo()]).toEqual([false, true]);
+    expect([sheet.peekUndo(), sheet.peekRedo()].map(Boolean)).toEqual([false, true]);
   });
 
   it("hands back the selection the edit was made in", () => {
@@ -336,6 +337,7 @@ describe("undo and redo", () => {
           [at("A3"), "7"],
         ],
         here,
+        "fill",
       );
       sheet.revise(
         [
@@ -343,13 +345,14 @@ describe("undo and redo", () => {
           [at("A3"), "5"],
         ],
         here,
+        "fill",
       );
 
       expect(display("A2")).toBe("5");
       sheet.undo();
       expect(display("A2")).toBe("");
       expect(display("A3")).toBe("");
-      expect(sheet.canUndo()).toBe(false);
+      expect(sheet.peekUndo()).toBeNull();
     });
 
     it("puts back a cell the first reading wrote and the second does not", () => {
@@ -361,8 +364,9 @@ describe("undo and redo", () => {
           [at("A3"), "7"],
         ],
         here,
+        "fill",
       );
-      sheet.revise([[at("A2"), "9"]], here);
+      sheet.revise([[at("A2"), "9"]], here, "fill");
 
       expect(display("A2")).toBe("9");
       expect(display("A3")).toBe("");
@@ -371,17 +375,17 @@ describe("undo and redo", () => {
     it("recomputes dependents of both the reading it drops and the one it takes", () => {
       const { sheet, display } = sheetOf({ A1: "5", B1: "=A2*2" });
 
-      sheet.edit([[at("A2"), "6"]], here);
+      sheet.edit([[at("A2"), "6"]], here, "fill");
       expect(display("B1")).toBe("12");
 
-      sheet.revise([[at("A2"), "10"]], here);
+      sheet.revise([[at("A2"), "10"]], here, "fill");
       expect(display("B1")).toBe("20");
     });
 
     it("does nothing when there is no action to revise", () => {
       const { sheet, display } = sheetOf({ A1: "5" });
 
-      sheet.revise([[at("A2"), "9"]], here);
+      sheet.revise([[at("A2"), "9"]], here, "fill");
       expect(display("A2")).toBe("");
     });
   });
@@ -397,6 +401,7 @@ describe("undo and redo", () => {
         [at("B1"), "2"],
       ],
       selectionAt({ row: 0, col: 0 }),
+      "type",
     );
 
     expect(seen[0]!.filter((key) => key === at("C1"))).toHaveLength(1);

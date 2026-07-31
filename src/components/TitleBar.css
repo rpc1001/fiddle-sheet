@@ -11,37 +11,140 @@
 
 .title-name {
   margin: 0;
-  color: var(--ink-72);
-  font-family: var(--font-sans);
-  font-size: var(--text-cell);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-message);
   font-weight: 500;
+  letter-spacing: -0.01em;
   line-height: 1;
+  cursor: default;
 }
 
+/* the accent belongs to whatever is being pointed at, so the name only takes it
+   while the pointer is actually on it */
+.title-lead {
+  transition: color var(--track-ms) var(--ease-track);
+}
+
+.title-lead:hover {
+  color: var(--accent);
+}
+
+.title-letter {
+  display: inline-block;
+  transform: translateY(calc(var(--lift, 0) * -0.2em));
+  transition: transform var(--track-ms) var(--ease-track);
+}
+
+/* the lift says nothing the name does not already say, so it goes rather than
+   arriving instantly, which is the one thing left when the duration is zeroed */
+@media (prefers-reduced-motion: reduce) {
+  .title-letter {
+    transform: none;
+  }
+}
+
+.title-join {
+  color: var(--ink-30);
+}
+
+/* the pair is pinned to the right edge, so the label growing in beside it
+   lengthens this leftwards and the buttons never move under the pointer */
 .title-actions {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
 }
 
-.bar-button {
-  padding: 6px 9px;
+.step-label {
+  color: var(--ink-72);
+  font-family: var(--font-sans);
+  font-size: var(--text-cell);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.step-said {
+  display: inline-block;
+  animation: step-said var(--track-ms) var(--ease-track) both;
+}
+
+@keyframes step-said {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+
+.step-place {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.step-pair {
+  display: flex;
   background: var(--paper);
   border: 1px solid var(--edge);
   border-radius: var(--radius-md);
-  color: var(--ink-45);
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
+  /* the corners belong to the pair, not to either half: without this the hover
+     fill rounds off against the divider in the middle */
+  overflow: hidden;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  background: none;
+  border: none;
+  color: var(--ink-72);
+  font-family: var(--font-sans);
+  font-size: var(--text-cell);
   line-height: 1;
   cursor: pointer;
+  transition:
+    color var(--track-ms) var(--ease-track),
+    background var(--track-ms) var(--ease-track);
 }
 
-.bar-button:hover:not(:disabled) {
-  background: var(--paper-lit);
-  color: var(--ink);
+.step + .step {
+  border-left: 1px solid var(--edge);
 }
 
-.bar-button:disabled {
-  opacity: 0.35;
+/* sized off the label beside it, so the two stay in proportion at any type size */
+.step-arrow {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--track-ms) var(--ease-track);
+}
+
+/* the accent carries the pointer here the same way it does on the sheet, and
+   the title bar is far enough from any cell for it not to be read as a trace */
+.step:hover:not(:disabled) {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.step:active:not(:disabled) .step-arrow {
+  transform: scale(0.88);
+}
+
+/* inside the button: the pair clips its overflow, so a ring drawn outside one
+   half is cut off along the edge it shares */
+.step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.step:disabled {
+  color: var(--ink-30);
   cursor: default;
 }

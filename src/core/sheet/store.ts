@@ -6,7 +6,7 @@ import { type Node, ParseError, parse } from "../formula/parse";
 import { references } from "../formula/references";
 import type { Selection } from "../selection";
 import { type Trace, createGraph } from "./graph";
-import { type Change, createHistory } from "./history";
+import { type Action, type Change, type Entry, createHistory } from "./history";
 
 export type Listener = () => void;
 
@@ -42,18 +42,20 @@ export type Sheet = {
   // so an uncommitted formula can be answered before it lands.
   preview(raw: string): CellValue;
   // the only way in: one call is one undoable action, whatever it touches.
-  // the selection travels with it so undo can return you to it.
-  edit(writes: Iterable<[CellKey, string]>, selection: Selection): void;
+  // the selection travels with it so undo can return you to it, and the action
+  // says which of them it was, which the writes alone cannot.
+  edit(writes: Iterable<[CellKey, string]>, selection: Selection, action: Action): void;
   // the last action, done a different way. it is rolled back and replaced, so
   // reading a fill one way and then the other leaves one action in history
   // rather than a correction stacked on a guess. only the caller that made the
   // action may call this, and only while it is still the last one.
-  revise(writes: Iterable<[CellKey, string]>, selection: Selection): void;
+  revise(writes: Iterable<[CellKey, string]>, selection: Selection, action: Action): void;
   // both return the selection to restore, or null when there was nothing to do
   undo(): Selection | null;
   redo(): Selection | null;
-  canUndo(): boolean;
-  canRedo(): boolean;
+  // what each way would take back, for anything that wants to name it first
+  peekUndo(): Entry | null;
+  peekRedo(): Entry | null;
   subscribe(key: CellKey, listener: Listener): () => void;
   // fired once per edit, undo or redo, for anything watching the sheet as a whole
   onEdit(listener: Listener): () => void;
@@ -160,7 +162,7 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
     recalcListeners.forEach((listener) => listener(recalc));
   }
 
-  function edit(writes: Iterable<[CellKey, string]>, selection: Selection): void {
+  function edit(writes: Iterable<[CellKey, string]>, selection: Selection, action: Action): void {
     const changes: Change[] = [];
     for (const [key, after] of writes) {
       const before = getRaw(key);
@@ -169,7 +171,7 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
     if (changes.length === 0) return;
 
     apply(changes, "after");
-    history.record({ changes, selection });
+    history.record({ changes, selection, action });
   }
 
   for (const [key, raw] of initial) write(key, raw);
@@ -192,12 +194,12 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
     // back with it, which leaves the sheet exactly as it was before the action.
     // the new writes are then an ordinary edit: their before values are the
     // original ones, and recording abandons the branch the undo just made.
-    revise(writes, selection) {
+    revise(writes, selection, action) {
       const entry = history.undo();
       if (!entry) return;
 
       apply(entry.changes, "before");
-      edit(writes, selection);
+      edit(writes, selection, action);
     },
 
     undo() {
@@ -214,8 +216,8 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
       return entry.selection;
     },
 
-    canUndo: history.canUndo,
-    canRedo: history.canRedo,
+    peekUndo: history.peekUndo,
+    peekRedo: history.peekRedo,
     revision: () => revision,
 
     onEdit(listener) {

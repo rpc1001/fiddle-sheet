@@ -126,7 +126,7 @@ function Draft({
     done.current = true;
 
     const written = asWritten(text);
-    sheet.edit([[cellKey(cell.row, cell.col), written]], selectionAt(cell));
+    sheet.edit([[cellKey(cell.row, cell.col), written]], selectionAt(cell), "type");
     stopEditing();
     if (rowStep !== 0 || colStep !== 0) {
       setSelection(selectionAt(clampAddress(cell.row + rowStep, cell.col + colStep)));
@@ -143,7 +143,7 @@ function Draft({
 
     const selection = getSelection();
     const written = asWritten(text);
-    sheet.edit(spreadWrites(written, cell, selectionRange(selection)), selection);
+    sheet.edit(spreadWrites(written, cell, selectionRange(selection)), selection, "type");
     stopEditing();
     onDone();
   }

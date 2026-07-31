@@ -55,7 +55,7 @@ export function applyFill(source: Range, extent: Range): void {
 
   const from = getSelection();
   const before = sheet.revision();
-  sheet.edit(readings[0]!.writes, from);
+  sheet.edit(readings[0]!.writes, from, "fill");
 
   setSelection({
     anchor: { row: extent.top, col: extent.left },
@@ -81,7 +81,7 @@ export function chooseReading(at: number): void {
   if (!offer || at === offer.chosen) return;
 
   revising = true;
-  sheet.revise(offer.readings[at]!.writes, offer.from);
+  sheet.revise(offer.readings[at]!.writes, offer.from, "fill");
   revising = false;
 
   offering.set({ ...offer, chosen: at, revision: sheet.revision() });
