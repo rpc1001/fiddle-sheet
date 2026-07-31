@@ -32,3 +32,10 @@ body {
   cursor: cell;
   user-select: none;
 }
+
+/* the pointer is holding the sheet, not aiming at a cell. set on the element
+   rather than through react: nothing else about a pan is state, and a class
+   toggle keeps a hundred frames of scrolling out of the render path. */
+.grid-viewport.is-panning {
+  cursor: grabbing;
+}

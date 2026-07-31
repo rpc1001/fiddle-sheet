@@ -69,7 +69,7 @@ const STEPS: Record<string, [number, number]> = {
   ArrowRight: [0, 1],
 };
 
-type Drag = "selection" | "reference" | "column" | "row" | "move" | "fill" | null;
+type Drag = "selection" | "reference" | "column" | "row" | "move" | "fill" | "pan" | null;
 
 function Cell({ row, col }: { row: number; col: number }) {
   const { display, numeric } = useCell(row, col);
@@ -97,6 +97,9 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   // the cells a fill is coming from. the selection moves to what the fill
   // covered when it lands, so it cannot be asked for the source afterwards.
   const fillSource = useRef<Range | null>(null);
+  // where the sheet was grabbed, kept as the point of the sheet under the
+  // pointer rather than as a pointer position, so a pan is one subtraction
+  const panFrom = useRef({ x: 0, y: 0 });
   const pickedBand = useRef(0);
   const pickedAxis = useRef<Axis>("column");
   // whether the band has actually been carried anywhere. the ghost appears on
@@ -231,6 +234,24 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   }
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>): void {
+    // the middle button grabs the sheet itself. it is the one press with no
+    // meaning on the cells, and preventing its default is what stops the
+    // browser from starting its own autoscroll on top of ours.
+    if (event.button === 1) {
+      const view = viewport.current;
+      if (!view) return;
+
+      event.preventDefault();
+      panFrom.current = {
+        x: event.clientX + view.scrollLeft,
+        y: event.clientY + view.scrollTop,
+      };
+      drag.current = "pan";
+      view.classList.add("is-panning");
+      event.currentTarget.setPointerCapture(event.pointerId);
+      return;
+    }
+
     if (event.button !== 0) return;
 
     // the editor and the suggestion list float over the cells but are not the
@@ -284,6 +305,16 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>): void {
+    // the sheet goes with the hand: the point that was under the pointer when
+    // it was grabbed stays under it. the ring is left alone, since nothing is
+    // being pointed at while the paper is moving.
+    if (drag.current === "pan") {
+      const view = viewport.current!;
+      view.scrollLeft = panFrom.current.x - event.clientX;
+      view.scrollTop = panFrom.current.y - event.clientY;
+      return;
+    }
+
     const cell = cellUnder(event);
 
     // the ring tracks whether or not a drag is running, so this sits ahead of
@@ -369,6 +400,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   // following a mouse that is no longer held, and a half finished move is not a
   // move, so it drops nothing
   function cancelDrag(): void {
+    if (drag.current === "pan") viewport.current?.classList.remove("is-panning");
     drag.current = null;
     setMoving(null);
     setFilling(null);
