@@ -10,6 +10,11 @@ import { type Change, createHistory } from "./history";
 
 export type Listener = () => void;
 
+// raw cell text, straight off the store. anything that rewrites a block of the
+// sheet takes one of these rather than the whole sheet: it reads, it does not
+// write, and that is visible in the signature.
+export type Read = (key: CellKey) => string;
+
 export type Recalc = {
   // the cells the edit recomputed, in the order the engine did the work
   order: CellKey[];
@@ -39,6 +44,11 @@ export type Sheet = {
   // the only way in: one call is one undoable action, whatever it touches.
   // the selection travels with it so undo can return you to it.
   edit(writes: Iterable<[CellKey, string]>, selection: Selection): void;
+  // the last action, done a different way. it is rolled back and replaced, so
+  // reading a fill one way and then the other leaves one action in history
+  // rather than a correction stacked on a guess. only the caller that made the
+  // action may call this, and only while it is still the last one.
+  revise(writes: Iterable<[CellKey, string]>, selection: Selection): void;
   // both return the selection to restore, or null when there was nothing to do
   undo(): Selection | null;
   redo(): Selection | null;
@@ -150,6 +160,18 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
     recalcListeners.forEach((listener) => listener(recalc));
   }
 
+  function edit(writes: Iterable<[CellKey, string]>, selection: Selection): void {
+    const changes: Change[] = [];
+    for (const [key, after] of writes) {
+      const before = getRaw(key);
+      if (before !== after) changes.push({ key, before, after });
+    }
+    if (changes.length === 0) return;
+
+    apply(changes, "after");
+    history.record({ changes, selection });
+  }
+
   for (const [key, raw] of initial) write(key, raw);
   propagate(cells.keys());
 
@@ -164,16 +186,18 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
       return cell.formula ? evaluate(cell.formula, readCell) : cell.value;
     },
 
-    edit(writes, selection) {
-      const changes: Change[] = [];
-      for (const [key, after] of writes) {
-        const before = getRaw(key);
-        if (before !== after) changes.push({ key, before, after });
-      }
-      if (changes.length === 0) return;
+    edit,
 
-      apply(changes, "after");
-      history.record({ changes, selection });
+    // undo lifts the entry onto the redo branch and the rollback puts the cells
+    // back with it, which leaves the sheet exactly as it was before the action.
+    // the new writes are then an ordinary edit: their before values are the
+    // original ones, and recording abandons the branch the undo just made.
+    revise(writes, selection) {
+      const entry = history.undo();
+      if (!entry) return;
+
+      apply(entry.changes, "before");
+      edit(writes, selection);
     },
 
     undo() {

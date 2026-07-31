@@ -48,9 +48,9 @@ function tokenize(source: string): Token[] {
       const value = Number(source.slice(start, at));
       if (Number.isNaN(value)) throw new ParseError(`bad number: ${source.slice(start, at)}`);
       tokens.push({ type: "number", value });
-    } else if (/[A-Za-z]/.test(char)) {
+    } else if (/[A-Za-z$]/.test(char)) {
       const start = at;
-      while (at < source.length && /[A-Za-z0-9]/.test(source[at]!)) at++;
+      while (at < source.length && /[A-Za-z0-9$]/.test(source[at]!)) at++;
       tokens.push({ type: "name", text: source.slice(start, at) });
     } else {
       throw new ParseError(`unexpected character: ${char}`);

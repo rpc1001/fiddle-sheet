@@ -18,7 +18,7 @@ export function referenceRange(startText: string, endText: string): Range | null
 
 // anything shaped like a reference, whole or half typed, and function names too:
 // what it turns out to be is the caller's question
-export const CHUNK = /[A-Za-z]+\d*(?::[A-Za-z]+\d*)?/g;
+export const CHUNK = /\$?[A-Za-z]+\$?\d*(?::\$?[A-Za-z]+\$?\d*)?/g;
 
 // every reference in a half-typed formula. the parser cannot help here: "=SUM(B2:B7"
 // is not a formula yet, and the cells still have to light up while it is being typed.

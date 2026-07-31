@@ -6,9 +6,12 @@ export function columnLabel(col: number): string {
   return String.fromCharCode(A + col);
 }
 
+// a leading "$" pins the column against a fill and says nothing about which
+// column it is, so every reader that only wants the letter can ignore it
 export function columnIndex(label: string): number | null {
-  if (label.length !== 1) return null;
-  const col = label.toUpperCase().charCodeAt(0) - A;
+  const letter = label.startsWith("$") ? label.slice(1) : label;
+  if (letter.length !== 1) return null;
+  const col = letter.toUpperCase().charCodeAt(0) - A;
   return col >= 0 && col < COLS ? col : null;
 }
 
@@ -30,8 +33,9 @@ export function addressOf(key: CellKey): Address {
 }
 
 // "B7" -> { row: 6, col: 1 }. null for anything out of the sheet's bounds.
+// "$B$7" is the same cell: the pins belong to fill, not to the address.
 export function parseAddress(text: string): Address | null {
-  const match = /^([A-Za-z])([0-9]+)$/.exec(text);
+  const match = /^\$?([A-Za-z])\$?([0-9]+)$/.exec(text);
   if (!match) return null;
 
   const col = columnIndex(match[1]!);

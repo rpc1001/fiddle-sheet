@@ -10,6 +10,16 @@ describe("parse", () => {
     expect(parse("B7")).toEqual({ kind: "ref", row: 6, col: 1 });
   });
 
+  it("reads a pinned reference as the same cell", () => {
+    expect(parse("$B$7")).toEqual({ kind: "ref", row: 6, col: 1 });
+    expect(parse("$B7")).toEqual({ kind: "ref", row: 6, col: 1 });
+    expect(parse("B$7")).toEqual({ kind: "ref", row: 6, col: 1 });
+  });
+
+  it("refuses a reference that has left the sheet", () => {
+    expect(() => parse("#REF*2")).toThrow(ParseError);
+  });
+
   it("accepts lowercase references", () => {
     expect(parse("b7")).toEqual({ kind: "ref", row: 6, col: 1 });
   });

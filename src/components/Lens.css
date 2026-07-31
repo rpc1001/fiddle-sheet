@@ -50,8 +50,16 @@
   cursor: pointer;
 }
 
+/* the keyboard's mark, and it means one thing: enter takes this one */
 .lens-option.is-on {
   background: rgb(var(--accent-rgb) / 0.9);
+}
+
+/* the pointer's mark, deliberately not the same. it says the row can be clicked,
+   which is true of every row whether or not the list has the keys, and it must
+   not be mistaken for the thing enter would take. */
+.lens-option:not(.is-on):hover {
+  background: var(--paper-12);
 }
 
 .lens-option-name {
@@ -141,8 +149,10 @@
   text-overflow: ellipsis;
 }
 
+/* the same colour as the mark on the cell it is blaming, so the sentence and the
+   box on the sheet read as one answer rather than two */
 .lens-label.is-problem {
-  color: var(--accent);
+  color: var(--blame);
 }
 
 .lens-value {

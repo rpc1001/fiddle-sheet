@@ -238,6 +238,51 @@
   }
 }
 
+/* the one part of the box that takes a press. it straddles the corner so that
+   half of it is over the cell and half over the ruled edge, which is what makes
+   it read as a grip on the box rather than a mark inside it. */
+.grid-fill-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
+  border: 1.5px solid var(--paper);
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+/* the box is drawn from the far side of its own border, so the handle on a band
+   sits at the bottom of the sheet where nobody is. a band is filled by moving
+   it, not by dragging a corner a hundred rows down. */
+.grid-selection.is-capped-top .grid-fill-handle,
+.grid-selection.is-capped-left .grid-fill-handle,
+/* the box fades out under the editor rather than unmounting, and a grip that
+   cannot be seen must not still be taking presses off the cell behind it */
+.grid-selection.is-editing .grid-fill-handle {
+  display: none;
+}
+
+/* where the fill would reach if it were let go now, drawn while the source stays
+   selected behind it. dashed because nothing has been written yet: the solid
+   accent rectangle in this grid always means a thing that is already true. */
+.grid-fill-extent {
+  position: absolute;
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  pointer-events: none;
+}
+
+/* the fill has landed and can still be read another way. the selection says so
+   by holding the outline it had while it was being dragged, so the offer in the
+   lens and the cells it is about are visibly the same thing. */
+.grid-selection.is-filled {
+  border-style: dashed;
+}
+
 /* the whole box at one distance: an overshoot is then the position overshooting
    and nothing else, so this is the only case that gets the whip */
 .grid-selection.is-travelling,

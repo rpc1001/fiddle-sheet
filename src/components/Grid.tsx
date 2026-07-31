@@ -8,6 +8,7 @@ import {
   useRef,
 } from "react";
 import { type Address, type CellKey, cellKey, columnLabel } from "../core/address";
+import { fillExtent } from "../core/fill";
 import { acceptsReference, insertReference } from "../core/formula/insert";
 import {
   COLS,
@@ -26,7 +27,7 @@ import {
   scrollToShow,
   zoneAtPoint,
 } from "../core/geometry";
-import { cellsIn, rangeAt } from "../core/range";
+import { type Range, cellsIn, rangeAt, sameRange } from "../core/range";
 import { moveColumns, moveRows } from "../core/sheet/move";
 import {
   type Selection,
@@ -37,6 +38,7 @@ import {
   selectionRange,
 } from "../core/selection";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
+import { applyFill, clearOffer, getFilling, setFilling } from "../state/filling";
 import { getHover, setHover } from "../state/hover";
 import { getMoving, setMoving } from "../state/moving";
 import { getSelection, setSelection } from "../state/selection";
@@ -60,7 +62,7 @@ const STEPS: Record<string, [number, number]> = {
   ArrowRight: [0, 1],
 };
 
-type Drag = "selection" | "reference" | "column" | "row" | "move" | null;
+type Drag = "selection" | "reference" | "column" | "row" | "move" | "fill" | null;
 
 function Cell({ row, col }: { row: number; col: number }) {
   const { display, numeric } = useCell(row, col);
@@ -85,6 +87,9 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   // where in the block it was picked up, so the ghost hangs off the pointer at
   // the same place the whole way rather than jumping its near edge to it
   const grabOffset = useRef(0);
+  // the cells a fill is coming from. the selection moves to what the fill
+  // covered when it lands, so it cannot be asked for the source afterwards.
+  const fillSource = useRef<Range | null>(null);
   const pickedBand = useRef(0);
   const pickedAxis = useRef<Axis>("column");
   // whether the band has actually been carried anywhere. the ghost appears on
@@ -227,6 +232,17 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     // already written by the time the list sees the press.
     if ((event.target as HTMLElement).closest(".grid-editor, .lens")) return;
 
+    // the handle sits over the corner cell of the selection, so it has to be
+    // asked about before the cell underneath it is
+    if ((event.target as HTMLElement).closest(".grid-fill-handle")) {
+      const source = selectionRange(getSelection());
+      fillSource.current = source;
+      setFilling(source);
+      drag.current = "fill";
+      event.currentTarget.setPointerCapture(event.pointerId);
+      return;
+    }
+
     const cell = cellUnder(event);
     const zone = zoneUnder(event);
 
@@ -269,6 +285,13 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     if (!hovered || !sameCell(hovered, cell)) setHover(cell);
 
     if (!drag.current) return;
+
+    if (drag.current === "fill" && fillSource.current) {
+      const extent = fillExtent(fillSource.current, cell);
+      const shown = getFilling();
+      if (!shown || !sameRange(shown, extent)) setFilling(extent);
+      return;
+    }
 
     // the line only appears once the pointer has picked a boundary, so a press
     // and release on a band that never moved leaves the sheet alone
@@ -314,6 +337,13 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
 
   function endDrag(): void {
     const carry = getMoving();
+    const reach = getFilling();
+
+    // a handle pressed and released without travelling reaches nothing, and
+    // applyFill has nothing to write
+    if (drag.current === "fill" && reach && fillSource.current) {
+      applyFill(fillSource.current, reach);
+    }
 
     // a press that never moved is a click, and a click on a header or a gutter
     // selects that one band: without this a block swallows every press inside it
@@ -334,6 +364,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
   function cancelDrag(): void {
     drag.current = null;
     setMoving(null);
+    setFilling(null);
   }
 
   function openEditor(cell: Address): void {
@@ -364,6 +395,10 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         cleared.map((cell) => [cellKey(cell.row, cell.col), ""]),
         selection,
       );
+    } else if (event.key === "Escape") {
+      // the fill is already written, so this dismisses the readings and nothing
+      // else. taking it back is undo, the same as for every other edit.
+      clearOffer();
     } else if (isChord(event, "z")) {
       // shift+z is the mac habit for redo, ctrl+y the windows one
       if (event.shiftKey) redo();

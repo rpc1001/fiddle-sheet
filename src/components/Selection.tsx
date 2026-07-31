@@ -4,6 +4,7 @@ import { coversEveryColumn, coversEveryRow, insetOf, switchesAxis } from "../cor
 import { type Range, isSingleCell, sameSize } from "../core/range";
 import { sameCell, selectionRange } from "../core/selection";
 import { useEditingCell } from "../state/editing";
+import { useFilling, useOffer } from "../state/filling";
 import { useSelection } from "../state/selection";
 
 // how the box gets from the last selection to this one. an arrival is for a
@@ -27,6 +28,8 @@ function handedOver(range: Range, open: Address | null): boolean {
 export function SelectionOverlay() {
   const range = selectionRange(useSelection());
   const editing = handedOver(range, useEditingCell());
+  const filling = useFilling();
+  const filled = useOffer() !== null;
   const previous = useRef(range);
   const motion = motionFrom(previous.current, range);
 
@@ -42,12 +45,20 @@ export function SelectionOverlay() {
 
   return (
     <>
+      {/* how far the fill would reach if it were let go now. it is drawn as its
+          own box rather than by stretching the selection, because the selection
+          is the thing being filled from and has to stay where it is to say so. */}
+      {filling && <div className="grid-fill-extent" style={insetOf(filling)} />}
       <div
         className={`grid-selection${wholeColumns ? " is-capped-top" : ""}${
           wholeRows ? " is-capped-left" : ""
-        }${motion}${editing ? " is-editing" : ""}`}
-        style={{ left: inset.left, top: inset.top, right: inset.right, bottom: inset.bottom }}
-      />
+        }${motion}${editing ? " is-editing" : ""}${filled ? " is-filled" : ""}`}
+        style={inset}
+      >
+        {/* the corner is the only part of the box that is a control. it is inside
+            the box so it travels with it on the box's own transition. */}
+        <div className="grid-fill-handle" />
+      </div>
       {/* the mark has to be its own element because it stays in the header while
           the box scrolls away, and it cannot be folded into the box: the box has
           to pass under the gutter as it scrolls sideways, and a lid has to sit

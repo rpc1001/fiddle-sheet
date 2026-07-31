@@ -1,6 +1,7 @@
 import { type CellKey, cellKey } from "../address";
 import { remapColumns, remapRows } from "../formula/remap";
 import { COLS, ROWS } from "../geometry";
+import type { Read } from "./store";
 
 // the bands in their new order, each listed by where it came from. the block is
 // lifted out and dropped back so that it starts at the gap named by target, where
@@ -36,7 +37,7 @@ export type BandMove = {
 // text carried along by the moved columns, and the formulas anywhere on the
 // sheet that pointed at them and now have to point somewhere else.
 export function moveColumns(
-  read: (key: CellKey) => string,
+  read: Read,
   left: number,
   right: number,
   target: number,
@@ -59,7 +60,7 @@ export function moveColumns(
 // the same move down the other axis: a row carries its cells and the formulas
 // that read them exactly as a column does
 export function moveRows(
-  read: (key: CellKey) => string,
+  read: Read,
   top: number,
   bottom: number,
   target: number,

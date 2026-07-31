@@ -1,5 +1,6 @@
 import type { CSSProperties, RefObject } from "react";
 import { type Address, cellKey } from "../core/address";
+import type { Reading } from "../core/fill";
 import { formatNumber } from "../core/format";
 import { type CellValue, errorDisplay, isError } from "../core/formula/errors";
 import { explainError, hasReference, substitute } from "../core/formula/explain";
@@ -15,10 +16,11 @@ import {
   rectOf,
   visiblePart,
 } from "../core/geometry";
-import { type Range, isSingleCell, rangeAt } from "../core/range";
+import { type Range, isSingleCell, rangeAt, rangeLabel } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { summarize } from "../core/summary";
 import { useEditing } from "../state/editing";
+import { type Offer, chooseReading, useOffer } from "../state/filling";
 import { useSelection } from "../state/selection";
 import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
 import { DraftPanel } from "./Suggestions";
@@ -167,6 +169,46 @@ function answerPlacement(range: Range, focus: Address, view: Viewport): Placemen
   };
 }
 
+// what the reading actually put in the cells, which is the whole reason the
+// choice can be made by looking rather than by trying it and undoing
+function firstFew(reading: Reading): string {
+  const texts = reading.writes.slice(0, 3).map(([, text]) => text || "empty");
+  return texts.join(", ") + (reading.writes.length > texts.length ? ", …" : "");
+}
+
+// the readings the fill could have taken, the applied one marked. picking
+// another rewrites the same cells and replaces the same action in history, so
+// the fill stays one thing that happened however many times it is read.
+function Readings({ offer }: { offer: Offer }) {
+  return (
+    <>
+      <div className="lens-label">filled {rangeLabel(offer.extent)}</div>
+      <ul className="lens-list">
+        {offer.readings.map((reading, index) => (
+          <li
+            key={reading.name}
+            className={index === offer.chosen ? "lens-option is-on" : "lens-option"}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              chooseReading(index);
+            }}
+          >
+            <span className="lens-option-name">{reading.name}</span>
+            <span className="lens-option-summary">{firstFew(reading)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+// nothing at all for a plain cell holding a plain value: it is already showing
+// what it is worth, and a panel repeating it would follow the pointer everywhere
+function answerBody(range: Range) {
+  const view = isSingleCell(range) ? cellView(range.top, range.left) : rangeView(range);
+  return view && <Body view={view} />;
+}
+
 function Body({ view }: { view: View }) {
   if (view.kind === "problem") {
     return (
@@ -189,6 +231,7 @@ function Body({ view }: { view: View }) {
 export function Lens({ viewport }: { viewport: RefObject<HTMLDivElement | null> }) {
   const selection = useSelection();
   const editing = useEditing();
+  const offer = useOffer();
   useSheetRevision();
 
   const box = viewportBox(viewport.current);
@@ -207,8 +250,11 @@ export function Lens({ viewport }: { viewport: RefObject<HTMLDivElement | null> 
   }
 
   const range = selectionRange(selection);
-  const view = isSingleCell(range) ? cellView(range.top, range.left) : rangeView(range);
-  if (!view) return null;
+
+  // a fill that has just landed is what the selection is about, and the sum of
+  // what it wrote is not the question in front of anyone
+  const body = offer ? <Readings offer={offer} /> : answerBody(range);
+  if (!body) return null;
 
   const placement = answerPlacement(range, selection.focus, box);
 
@@ -217,7 +263,7 @@ export function Lens({ viewport }: { viewport: RefObject<HTMLDivElement | null> 
       className={placement.at === "window" ? "lens is-in-window" : "lens"}
       style={placement.style}
     >
-      <Body view={view} />
+      {body}
     </div>
   );
 }

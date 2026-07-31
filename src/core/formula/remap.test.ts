@@ -92,4 +92,11 @@ describe("remapRows", () => {
   it("returns a formula with no references unchanged", () => {
     expect(remapRows("=2*3", swappedRows)).toBe("=2*3");
   });
+
+  // a pin says what a fill may not move, and a band move is not a fill: the
+  // reference still has to follow its row, and still has to stay pinned after
+  it("keeps a pin while moving what it names", () => {
+    expect(remapRows("=$A$1", swappedRows)).toBe("=$A$2");
+    expect(remapColumns("=$A$1", swapped)).toBe("=$B$1");
+  });
 });

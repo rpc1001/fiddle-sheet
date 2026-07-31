@@ -324,6 +324,68 @@ describe("undo and redo", () => {
     expect(seen).toEqual([[]]);
   });
 
+  describe("revise", () => {
+    const here = selectionAt({ row: 0, col: 0 });
+
+    it("leaves one action in history rather than a correction on top of a guess", () => {
+      const { sheet, display } = sheetOf({ A1: "5" });
+
+      sheet.edit(
+        [
+          [at("A2"), "6"],
+          [at("A3"), "7"],
+        ],
+        here,
+      );
+      sheet.revise(
+        [
+          [at("A2"), "5"],
+          [at("A3"), "5"],
+        ],
+        here,
+      );
+
+      expect(display("A2")).toBe("5");
+      sheet.undo();
+      expect(display("A2")).toBe("");
+      expect(display("A3")).toBe("");
+      expect(sheet.canUndo()).toBe(false);
+    });
+
+    it("puts back a cell the first reading wrote and the second does not", () => {
+      const { sheet, display } = sheetOf({ A1: "5" });
+
+      sheet.edit(
+        [
+          [at("A2"), "6"],
+          [at("A3"), "7"],
+        ],
+        here,
+      );
+      sheet.revise([[at("A2"), "9"]], here);
+
+      expect(display("A2")).toBe("9");
+      expect(display("A3")).toBe("");
+    });
+
+    it("recomputes dependents of both the reading it drops and the one it takes", () => {
+      const { sheet, display } = sheetOf({ A1: "5", B1: "=A2*2" });
+
+      sheet.edit([[at("A2"), "6"]], here);
+      expect(display("B1")).toBe("12");
+
+      sheet.revise([[at("A2"), "10"]], here);
+      expect(display("B1")).toBe("20");
+    });
+
+    it("does nothing when there is no action to revise", () => {
+      const { sheet, display } = sheetOf({ A1: "5" });
+
+      sheet.revise([[at("A2"), "9"]], here);
+      expect(display("A2")).toBe("");
+    });
+  });
+
   it("reports a cell once even when an edit reaches it twice", () => {
     const { sheet } = sheetOf({ C1: "=A1+B1" });
     const seen: CellKey[][] = [];

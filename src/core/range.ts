@@ -16,6 +16,15 @@ export function rangeAt(cell: Address): Range {
   return { top: cell.row, left: cell.col, bottom: cell.row, right: cell.col };
 }
 
+export function sameRange(one: Range, two: Range): boolean {
+  return (
+    one.top === two.top &&
+    one.left === two.left &&
+    one.bottom === two.bottom &&
+    one.right === two.right
+  );
+}
+
 export function isSingleCell(range: Range): boolean {
   return range.top === range.bottom && range.left === range.right;
 }
