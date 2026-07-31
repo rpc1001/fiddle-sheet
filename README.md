@@ -102,18 +102,94 @@ cell it names, and `setPrecedents` unwires the old edges before wiring the new o
 the edges that were not there before, which is what lets a new connection be shown being made
 instead of only its result.
 
-An edit does two passes. First it floods `dependents` outward from the cells that changed to get the
-affected set. Then it runs Kahn's algorithm over that set alone, which orders it so every cell comes
-after everything it reads. Each cell recomputes exactly once and never on a stale input. The cost is
-the size of the affected set.
-
-Writing and recomputing are separate. An edit stores all its cells and rewires the graph first,
-then runs one pass over everything downstream. 
+An edit floods `dependents` outward from the cells that changed to get the affected set, then runs
+Kahn's algorithm over that set alone, which orders it so every cell comes after everything it reads.
+The whole edit is seeded at once, so a cell reading two changed cells recomputes once, after both,
+instead of twice with a stale value in between. The cost is the size of the affected set.
 
 Cycles need no separate detection. Kahn's only releases a cell once everything it waits on has run,
-so anything still waiting when the queue drains is waiting on itself, directly or through a chain.
-Those come back as `circular` and get `#CYCLE!`.
+so anything still waiting when the queue drains is waiting on itself, and gets `#CYCLE!`.
 
-`trace` reads the same two maps breadth first, three hops each way, which is what the overlay draws
-when you select a cell. It stops at three because past that the tint is too faint to read and the
-sheet is just busy.
+### Trade-offs
+
+The grid is fixed at 100 by 26 instead of an infinite canvas. That is the brief's scope, and taking
+it means the geometry is constants: row height, column width, the size of the whole sheet. Hit
+testing is then arithmetic on a pointer position rather than a lookup, and the selection box can be
+positioned from the sheet's four edges because the sheet has a known size. An infinite canvas makes
+all of that dynamic. The cost is that 26 columns is hard capped, since a column label is one letter.
+
+Every cell renders. All 2,600 of them are real divs, no windowing. I built windowing first and then
+deleted it. At this size it buys nothing and it costs complexity and possible delays on rendering.Past ten thousand or so rows I would put windowing back.
+
+A range reference is one graph edge per cell, so `=SUM(A:A)` makes a hundred of them. Correct and
+fast here, wrong at a million rows, where the fix is range nodes with interval overlap. Definitely not worth building for a sheet this size.
+
+Moving a column or a row rewrites the whole sheet. Every cell is walked to remap the formulas that
+point at what moved, so it is O(sheet) per move instead of O(affected). It is nothing at 2,600
+cells, but it does not scale.
+
+No persistence. Refresh and you are back to the seed, I chose this for testing and demo purposes.
+
+No multi-range selection. Ctrl-clicking a second range is out, because every consumer of the
+selection assumes one rectangle: the fill, the paste, the summary, the clear, the overlay geometry.
+Supporting a set of rectangles complicates all of them to serve an interaction that mostly exists
+for formatting, which is out of scope here anyway.
+
+No column resizing. Column width is one constant that layout and hit testing both read, and making
+it per column means a lookup everywhere that is currently arithmetic. 
+
+### What I would do with more time
+
+**Make it hold a real sheet.** Everything here is honest at 2,600 cells and gives out somewhere past
+a few thousand. 
+
+**Let people theme it.** The whole surface already runs off one set of custom properties. Colour,
+type, radii, shadows, and the easings and durations too, which means motion is as themeable as
+paint. Light and dark are just two sets of those values. I would open that up: pick a palette, pick
+how much the sheet moves, or write your own and share it. I think choosing your own  style of animations would be more fun for the users, do you want something fun and playful or sleek and crispy, or maybe a mix of both?  A spreadsheet is a thing people sit in front of all day and nobody has ever been allowed to make one theirs.
+
+### Where this differs from Sheets
+
+A spreadsheet sometiems feels like a black box: the dependency graph, the recalculation travelling through it, which cell actually broke, what a formula is really computing. All of that exists inside the engine and none of it reaches the
+screen, so I mostly focued on  transparency. The second is that the hard part for someone new is actually knowing what to type, so the gestures should state the thing rather than expect you to already know it. The third is that a spreadsheet is a thing people sit in front of all day, so I wanted to make it more fun and enjoyable.
+
+**The lens.** The main transparency tool.A dark panel that follows the selection and answers whatever is under it. Select a
+block and it leads with the sum, then count, average, min and max underneath, so nothing has to be
+chosen. Select a single cell holding a formula and it shows the formula, the value, and the working
+with the references swapped for what they are worth, so `=B2*C2` reads back as `12 x 4`. Select a
+cell in error and it gives the code and a sentence. Select a plain number and it says nothing,
+because the cell already did. While you are typing a formula it becomes the draft panel, carrying
+the suggestions and the running answer.
+
+It sits on the nearest edge of the selection that has room, lined up with the cell you are working
+on, measured against the visible part of the selection rather than the whole of it. Sheets
+puts the same answer in the bottom right corner of the window, which is the furthest point on screen
+from your eyes.
+
+**Drag a block of numbers onto an empty cell to total it.** No equivalent in Sheets. The hard part
+of a first spreadsheet is knowing that `SUM` exists and that the range is spelled `A2:A18`. Alt held,
+carrying a selection to a cell states both at once, and what hangs off the pointer is the formula it
+would write. It lands open rather than committed, since the range came from the hand and the
+function was only a guess.
+
+**It finishes what you started typing.** `=SUM(A1:A5` closes its own bracket and `=SUM(C` expands
+to `=SUM(C:C)`. This reduces annoyances from petty syntax errors for spreadsheet noobs such as myself.
+
+**A fill of one number counts instead of copying, and offers the other reading.** Dragging a handle
+says extend, and copying is what paste is for. It is not a coin flip you lose, because the lens
+lists the other readings with the values each would write, and picking one replaces the same history
+entry instead of stacking a correction on a guess.
+
+**Errors name the cell to go and fix.** `#VALUE!` says something is wrong somewhere in a formula
+that might read fifty cells. Every error carries a blame address, so the culprit forty rows away
+gets marked and the lens says "B4 is text, not a number".
+
+**Selecting a cell traces what it reads and what reads it.** Three hops each way, merged into the
+fewest rectangles so a traced range is one outline instead of a grid of tiles. 
+
+**A recalculation is animated in the order it happened.** The engine hands over the order it
+recomputed in and the pulse follows it, so propagation is visible rather than assumed. Dropped
+entirely under reduced motion.
+
+**Undo says what it will take back.** `undo fill C2:C8`, `undo move B:D`. Only possible because the
+action name travels with the write. Sheets says nothing at all.
