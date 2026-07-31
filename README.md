@@ -107,10 +107,8 @@ affected set. Then it runs Kahn's algorithm over that set alone, which orders it
 after everything it reads. Each cell recomputes exactly once and never on a stale input. The cost is
 the size of the affected set.
 
-
 Writing and recomputing are separate. An edit stores all its cells and rewires the graph first,
-then runs one pass over everything downstream. Pasting A1 and A2 when C1 reads both means C1
-recomputes once, after both, instead of twice with a stale value in between.
+then runs one pass over everything downstream. 
 
 Cycles need no separate detection. Kahn's only releases a cell once everything it waits on has run,
 so anything still waiting when the queue drains is waiting on itself, directly or through a chain.
