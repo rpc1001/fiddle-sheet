@@ -8,6 +8,21 @@
 .trace-mark {
   border-radius: var(--radius-md);
   opacity: calc(1 / var(--depth));
+  animation: trace-reveal var(--track-ms) var(--ease-track) backwards;
+}
+
+/* an answer to where you are, not something that happened, so it comes up and
+   stays: nothing here should read as the sheet recalculating. it presses onto
+   its cells the way the hover ring presses onto the one under the pointer, on
+   the settling curve, since a size that overshoots is a size that was briefly
+   wrong. no closing keyframes on purpose: that leaves the end of it at the depth
+   opacity above rather than restating it. leaving is not animated, or the old
+   cell's relations and the new one's would be on screen together. */
+@keyframes trace-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 .trace-mark.is-input {
