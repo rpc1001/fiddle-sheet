@@ -431,7 +431,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     // the formula arrives open rather than written: the range and the function
     // are both stated, and the one that was guessed is the one the caret is in
     if (drag.current === "quote" && quote?.onto) {
-      startEditing(quote.onto, quote.text);
+      startEditing(quote.onto, quote.text, "guessed");
     }
 
     // a handle pressed and released without travelling reaches nothing, and

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rangeLabel } from "../range";
-import { acceptSuggestion, suggest } from "./suggest";
+import { acceptSuggestion, calledFunction, suggest, swapFunction } from "./suggest";
 
 const names = (text: string): string[] => {
   const found = suggest(text);
@@ -102,5 +102,30 @@ describe("acceptSuggestion", () => {
   it("adds the name when nothing has been typed to replace", () => {
     expect(acceptSuggestion("=", "SUM")).toBe("=SUM(");
     expect(acceptSuggestion("=B1+", "COUNT")).toBe("=B1+COUNT(");
+  });
+});
+
+describe("calledFunction", () => {
+  it("names the call a whole draft makes", () => {
+    expect(calledFunction("=SUM(A1:A5)")).toBe("SUM");
+    expect(calledFunction("=average(B1:B3)")).toBe("AVERAGE");
+  });
+
+  it("says nothing about a draft that is more than one call", () => {
+    expect(calledFunction("=SUM(A1:A5)*2")).toBeNull();
+    expect(calledFunction("=SUM(A1:A5)+SUM(B1:B5)")).toBeNull();
+    expect(calledFunction("=A1+A2")).toBeNull();
+    expect(calledFunction("=SUM(A1:A5")).toBeNull();
+  });
+});
+
+describe("swapFunction", () => {
+  it("reads the same arguments a different way", () => {
+    expect(swapFunction("=SUM(A1:A5)", "AVERAGE")).toBe("=AVERAGE(A1:A5)");
+  });
+
+  it("leaves anything it cannot swap alone", () => {
+    expect(swapFunction("=A1+A2", "SUM")).toBe("=A1+A2");
+    expect(swapFunction("=SUM(A1)*B(2)", "AVERAGE")).toBe("=SUM(A1)*B(2)");
   });
 });

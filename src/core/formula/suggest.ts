@@ -83,3 +83,25 @@ export function acceptSuggestion(text: string, name: string): string {
   const partial = partialName(text);
   return partial ? text.slice(0, text.length - partial.length) + opened : text + opened;
 }
+
+// a draft that is nothing but one function call. "=SUM(A1:A5)" is one,
+// "=SUM(A1:A5)*2" and "=SUM(A1)*B(2)" are not: both say more than the name does,
+// so swapping the name would not be swapping the whole reading.
+const WHOLE_CALL = /^=([A-Za-z]+)\((.*)\)$/;
+
+function wholeCall(text: string): { name: string; args: string } | null {
+  const found = WHOLE_CALL.exec(text);
+  if (!found || found[2]!.includes(")")) return null;
+  return { name: found[1]!.toUpperCase(), args: found[2]! };
+}
+
+export function calledFunction(text: string): string | null {
+  return wholeCall(text)?.name ?? null;
+}
+
+// the same arguments read a different way. this is the swap behind an offered
+// formula: what was guessed is the name, so the name is the only part that moves.
+export function swapFunction(text: string, name: string): string {
+  const call = wholeCall(text);
+  return call ? `=${name}(${call.args})` : text;
+}

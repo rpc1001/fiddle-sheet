@@ -81,6 +81,13 @@ export function balanceBrackets(text: string): string {
   return text + ")".repeat(depth);
 }
 
+// the draft as the sheet will hold it. previewing an answer and committing one
+// have to agree about what the text means, so they ask the same question here
+// rather than each composing the two steps for themselves.
+export function asWritten(text: string): string {
+  return balanceBrackets(expandColumns(text));
+}
+
 function cellRange(text: string): Range | null {
   const address = parseAddress(text);
   return address ? rangeAt(address) : null;

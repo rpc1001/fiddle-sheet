@@ -104,6 +104,27 @@
   background: rgb(var(--accent-rgb) / 0.9);
 }
 
+/* the same face as the operator keys, in the accent, because it is the action
+   on the line rather than another thing to add to the draft */
+.lens-done {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-cell);
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.lens-done:hover {
+  background: rgb(var(--accent-rgb) / 0.9);
+}
+
 .lens-argument {
   padding: 2px 8px;
   color: var(--accent);
@@ -111,8 +132,13 @@
   font-size: var(--text-hint);
 }
 
-/* the answer keeps the bottom of the panel whatever else is showing */
+/* the answer and the one thing to do with it, on the same line: a button on a
+   row of its own has a row of nothing beside it, and reads as left over */
 .lens-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 0 8px;
 }
 
@@ -122,6 +148,16 @@
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--paper-12);
+}
+
+/* a flex item will not shrink below its own text, so without these two a long
+   enough answer, or a long enough sentence about one, pushes the button off the
+   panel. both wrap rather than truncate: a number cut short reads as a
+   different number, and half a sentence is not an explanation. */
+.lens-result-body,
+.lens-answer {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .lens-answer {

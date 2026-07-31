@@ -12,7 +12,7 @@ import { spreadWrites } from "../core/entry";
 import { SHEET_WIDTH, clampAddress, rectOf } from "../core/geometry";
 import { rangeAt } from "../core/range";
 import { selectionAt, selectionRange } from "../core/selection";
-import { balanceBrackets, expandColumns } from "../core/formula/scan";
+import { asWritten } from "../core/formula/scan";
 import { acceptSuggestion } from "../core/formula/suggest";
 import {
   type Editing,
@@ -21,6 +21,7 @@ import {
   moveHighlight,
   offered,
   setDraft,
+  setDraftField,
   stopEditing,
   useEditing,
 } from "../state/editing";
@@ -124,7 +125,7 @@ function Draft({
     if (done.current) return;
     done.current = true;
 
-    const written = balanceBrackets(expandColumns(text));
+    const written = asWritten(text);
     sheet.edit([[cellKey(cell.row, cell.col), written]], selectionAt(cell));
     stopEditing();
     if (rowStep !== 0 || colStep !== 0) {
@@ -141,7 +142,7 @@ function Draft({
     done.current = true;
 
     const selection = getSelection();
-    const written = balanceBrackets(expandColumns(text));
+    const written = asWritten(text);
     sheet.edit(spreadWrites(written, cell, selectionRange(selection)), selection);
     stopEditing();
     onDone();
@@ -208,7 +209,10 @@ function Draft({
       {/* the field grows because this hidden copy of the text sets the width */}
       <span className="grid-editor-mirror">{text}</span>
       <input
-        ref={input}
+        ref={(element) => {
+          input.current = element;
+          setDraftField(element);
+        }}
         className="grid-editor-field"
         value={text}
         autoFocus

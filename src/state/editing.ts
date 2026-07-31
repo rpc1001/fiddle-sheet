@@ -18,7 +18,13 @@ export type Editing = {
   picked: boolean;
   // escape closes the list before it cancels the edit
   dismissed: boolean;
+  // a guessed draft was written for the user rather than by them, so its
+  // function is only a guess and the other readings of the same range are worth
+  // offering. a typed one says what it means already.
+  origin: DraftOrigin;
 } | null;
+
+export type DraftOrigin = "typed" | "guessed";
 
 const store = createValueStore<Editing>(null);
 
@@ -33,22 +39,59 @@ function suggestionFor(text: string): Suggestion {
 
 export const getEditing = store.get;
 
-export function startEditing(cell: Address, text: string): void {
-  store.set({ cell, text, inserted: null, highlight: 0, picked: false, dismissed: false });
+// the open editor's field. the panel is drawn in a different tree from the
+// editor, so it cannot be handed the element as a prop, and the draft is
+// already shared through this file for the same reason.
+let field: HTMLInputElement | null = null;
+
+export function setDraftField(element: HTMLInputElement | null): void {
+  field = element;
+}
+
+// leaving the field is what saves a draft, so anything offering to save asks
+// for that rather than being a second way to save that could fall out of step
+export function leaveDraftField(): void {
+  field?.blur();
+}
+
+export function startEditing(cell: Address, text: string, origin: DraftOrigin = "typed"): void {
+  store.set({
+    cell,
+    text,
+    inserted: null,
+    highlight: 0,
+    picked: false,
+    dismissed: false,
+    origin,
+  });
 }
 
 // typing invalidates the insertion point: whatever is at the end is now yours.
 // it also reopens the list, since the name being typed has changed.
-export function setDraft(text: string): void {
+//
+// the draft becomes the user's by default: a guess is only being offered until
+// they touch it. the swap list is the one caller that says otherwise, because
+// it is rewriting the very draft it is offering.
+export function setDraft(text: string, origin: DraftOrigin = "typed"): void {
   const editing = store.get();
   if (editing) {
-    store.set({ ...editing, text, inserted: null, highlight: 0, picked: false, dismissed: false });
+    store.set({
+      ...editing,
+      text,
+      inserted: null,
+      highlight: 0,
+      picked: false,
+      dismissed: false,
+      origin,
+    });
   }
 }
 
+// a reference written by clicking the grid: the same act as typing one, so it
+// takes the draft over from a guess the same way
 export function setInsertedDraft(text: string, inserted: Span): void {
   const editing = store.get();
-  if (editing) store.set({ ...editing, text, inserted });
+  if (editing) store.set({ ...editing, text, inserted, origin: "typed" });
 }
 
 export function moveHighlight(step: number, count: number): void {
