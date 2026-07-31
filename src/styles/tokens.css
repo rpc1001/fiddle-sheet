@@ -1,12 +1,11 @@
 :root {
+  color-scheme: light;
+
   --ink-rgb: 20 17 13;
 
   --paper: #fffdf9;
   --paper-lit: #ffffff;
   --paper-veil: rgb(255 253 249 / 0.93);
-  --paper-82: rgb(255 253 249 / 0.82);
-  --paper-45: rgb(255 253 249 / 0.45);
-  --paper-12: rgb(255 253 249 / 0.12);
   --card: #f4f1ea;
   --ink: rgb(var(--ink-rgb));
   --ink-cell: rgb(var(--ink-rgb) / 0.88);
@@ -16,18 +15,36 @@
   --ink-42: rgb(var(--ink-rgb) / 0.42);
   --ink-30: rgb(var(--ink-rgb) / 0.3);
 
+  /* the lens does not follow the theme: the answer reads off the same panel
+     whichever way the sheet is lit, so it carries its own ink rather than
+     borrowing the sheet's, which is the one that flips */
+  --panel: #14110d;
+  --panel-ink-rgb: 255 253 249;
+  --panel-ink: rgb(var(--panel-ink-rgb));
+  --panel-ink-82: rgb(var(--panel-ink-rgb) / 0.82);
+  --panel-ink-45: rgb(var(--panel-ink-rgb) / 0.45);
+  --panel-edge: rgb(var(--panel-ink-rgb) / 0.12);
+
+  /* light caught on the top edge of something lifted off the sheet. on paper
+     there is none to catch: the shadow alone says how far off the page it is. */
+  --rim: transparent;
+
   --accent-rgb: 226 89 10;
   --accent: rgb(var(--accent-rgb));
   --accent-tint: rgb(var(--accent-rgb) / 0.09);
 
-  /* the other direction of a dependency: cells that read the one you are on */
-  --flow-rgb: 22 104 118;
+  /* the other direction of a dependency: cells that read the one you are on.
+     carried at the same luminance as the accent, which is what makes the two
+     read as one pair rather than as a bright mark and a dark one. */
+  --flow-rgb: 28 144 176;
+  --flow-tint: rgb(var(--flow-rgb) / 0.1);
 
   /* the cell an error came from. its own colour because the accent already means
      "this is read by the cell you are on", and the culprit is not one of those:
      it is the one to go and fix. */
   /* light enough to hold up on the dark lens and dark enough to hold up on the
-     paper, since the sentence and the mark it goes with sit on opposite grounds */
+     paper, since the sentence and the mark it goes with sit on opposite grounds.
+     that is what lets it stay put when the sheet turns dark as well. */
   --blame-rgb: 209 48 44;
   --blame: rgb(var(--blame-rgb));
 
@@ -54,10 +71,15 @@
   --radius-lg: 11px;
   --radius-pill: 999px;
 
-  --shadow-float: 0 10px 30px rgb(var(--ink-rgb) / 0.15);
+  /* what a shadow is cast in, which is not what the sheet is written in: on
+     paper it is the ink, in the dark it is black. every shadow and every recess
+     takes its colour from here so none of them invert with the text. */
+  --shadow-rgb: var(--ink-rgb);
+
+  --shadow-float: 0 10px 30px rgb(var(--shadow-rgb) / 0.15);
   /* for something one cell tall sitting just off the page, rather than the
      panels and the pill, which hover well above it */
-  --shadow-lift: 0 4px 12px rgb(var(--ink-rgb) / 0.1);
+  --shadow-lift: 0 4px 12px rgb(var(--shadow-rgb) / 0.1);
 
   --title-bar-h: 54px;
 
@@ -68,6 +90,44 @@
   --text-hint: 11px;
   --text-label: 10px;
   --tracking-label: 0.16em;
+}
+
+/* the same sheet under a different light. only the surfaces, the lines and the
+   depth are restated here: everything derived from --ink-rgb turns over with it,
+   and the accent, the blame red and the lens panel are deliberately left where
+   they are so the same colour keeps meaning the same thing in both. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink-rgb: 240 235 226;
+
+  --paper: #201c17;
+  --paper-lit: #2a251e;
+  --paper-veil: rgb(32 28 23 / 0.93);
+  /* the chrome sits under the sheet rather than over it, the same way the card
+     is the duller of the two on paper */
+  --card: #191611;
+
+  /* a wash this faint disappears on a dark ground long before it does on a pale
+     one, so the fills and the rules are carried heavier here to land the same */
+  --accent-tint: rgb(var(--accent-rgb) / 0.18);
+  --flow-tint: rgb(var(--flow-rgb) / 0.2);
+
+  --edge: rgb(var(--ink-rgb) / 0.14);
+  --edge-soft: rgb(var(--ink-rgb) / 0.1);
+  --edge-faint: rgb(var(--ink-rgb) / 0.16);
+
+  --rule-header: rgb(var(--ink-rgb) / 0.18);
+  --rule-row: rgb(var(--ink-rgb) / 0.08);
+  --rule-col: rgb(var(--ink-rgb) / 0.065);
+
+  /* a shadow needs something brighter than itself to fall on, and here there is
+     little: it is cast in black and carried harder, and the lit top edge does
+     the rest of the saying of how far off the page a thing is */
+  --rim: rgb(255 255 255 / 0.09);
+  --shadow-rgb: 0 0 0;
+  --shadow-float: 0 10px 30px rgb(var(--shadow-rgb) / 0.55);
+  --shadow-lift: 0 4px 12px rgb(var(--shadow-rgb) / 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {

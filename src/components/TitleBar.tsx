@@ -2,13 +2,9 @@ import { type PointerEvent, useState } from "react";
 import type { Entry } from "../core/sheet/history";
 import { placeOf } from "../core/sheet/place";
 import { redo, sheet, undo, useSheetRevision } from "../state/sheet";
+import { ThemeSwitch } from "./ThemeSwitch";
 import "./TitleBar.css";
-
-// the grid keeps the keyboard: without this the button would take focus and the
-// same shortcut would stop working straight after you clicked it
-function keepFocus(event: { preventDefault(): void }): void {
-  event.preventDefault();
-}
+import { keepFocus } from "./keepFocus";
 
 const NAME = "fiddle";
 
@@ -37,7 +33,6 @@ function stir(event: PointerEvent<HTMLSpanElement>): void {
 function Fiddle() {
   return (
     <span
-      className="title-lead"
       onPointerMove={stir}
       onPointerLeave={(event) => lift(event.currentTarget, () => 0)}
     >
@@ -112,6 +107,8 @@ export function TitleBar() {
         <Fiddle />
         <span className="title-join">-</span>sheet
       </h1>
+
+      <ThemeSwitch />
 
       <div className="title-actions">
         <span className="step-label" aria-hidden="true">

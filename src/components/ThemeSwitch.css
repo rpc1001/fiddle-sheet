@@ -1,0 +1,74 @@
+/* a groove cut into the bar with a knob riding in it. the track takes the bar's
+   own colour and is drawn by its outline alone, which is what makes it read as
+   a recess rather than as a second object sitting on top. */
+.theme-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 52px;
+  height: 28px;
+  padding: 2px;
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: border-color var(--track-ms) var(--ease-track);
+}
+
+.theme-switch:hover {
+  border-color: var(--edge-faint);
+}
+
+.theme-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* the one raised thing here: it catches the light the groove does not. position
+   and give are kept on separate properties rather than composed into one
+   transform, so only the give is allowed to spring. */
+.theme-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: var(--paper-lit);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lift);
+  transition:
+    translate var(--track-ms) var(--ease-track),
+    scale var(--track-ms) var(--ease-travel);
+}
+
+.theme-switch[aria-checked="true"] .theme-thumb {
+  translate: 24px;
+}
+
+/* leaned on, the knob gives. it widens by less than the room either side of it,
+   so it never breaks the groove it rides in. */
+.theme-switch.is-pressed .theme-thumb {
+  scale: 1.14 0.9;
+}
+
+/* positioned, or the knob (which is) would paint over them. the box is wider
+   than the drawing so the icon centres in its half of the track. */
+.theme-icon {
+  position: relative;
+  flex: none;
+  width: 23px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--ink-30);
+  transition: color var(--track-ms) var(--ease-track);
+}
+
+/* the face the knob has come to rest on, read against the lit surface under it */
+.theme-switch[aria-checked="false"] .is-light,
+.theme-switch[aria-checked="true"] .is-dark {
+  color: var(--ink);
+}

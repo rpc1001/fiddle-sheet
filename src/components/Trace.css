@@ -31,7 +31,7 @@
 }
 
 .trace-mark.is-output {
-  background: rgb(var(--flow-rgb) / 0.1);
+  background: var(--flow-tint);
   box-shadow: inset 0 0 0 1px rgb(var(--flow-rgb) / 0.3);
 }
 

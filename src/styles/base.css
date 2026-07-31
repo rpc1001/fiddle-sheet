@@ -18,6 +18,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* the sheet turns over in one frame, and this is what makes it one frame. the
+   labels, the letters in the name and the step buttons all ease a colour to
+   follow the pointer: left alone, a swap sets every one of them drifting to its
+   new ink over a tenth of a second while the cells around them cut, and they
+   visibly trail the sheet they belong to. the swap is not a thing to ease into.
+
+   everything, rather than a list of the transitions that trail today, which is a
+   list that goes stale the next time one is added. the breadth costs nothing
+   here: --ink-rgb changes on :root, so every element inheriting it is being
+   restyled this frame either way.
+
+   the icons are the exception: they are the acknowledgement, and a property
+   suppressed for the frame its value changes in does not ease late, it does not
+   ease at all, so including them would not delay the crossing, it would delete
+   it. */
+:root.is-turning *:not(.theme-icon) {
+  transition: none !important;
+}
+
 .app {
   position: relative;
   display: flex;

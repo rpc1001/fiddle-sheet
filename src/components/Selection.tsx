@@ -25,7 +25,8 @@ function handedOver(range: Range, open: Address | null): boolean {
 }
 
 // one positioned element for the whole selection, so extending it never touches
-// a cell. the only thing in the grid that re-renders during a drag.
+// a cell. a drag re-renders this and the handful of panels that describe the
+// selection, and no cell at all.
 export function SelectionOverlay() {
   const range = selectionRange(useSelection());
   const editing = handedOver(range, useEditingCell());

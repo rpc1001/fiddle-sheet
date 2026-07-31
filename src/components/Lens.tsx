@@ -18,11 +18,10 @@ import {
 } from "../core/geometry";
 import { type Range, isSingleCell, rangeAt, rangeLabel } from "../core/range";
 import { selectionRange } from "../core/selection";
-import { summarize } from "../core/summary";
 import { useEditing } from "../state/editing";
 import { type Offer, chooseReading, useOffer } from "../state/filling";
 import { useSelection } from "../state/selection";
-import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
+import { sheet, summaryOf, useSheetRevision } from "../state/sheet";
 import { DraftPanel } from "./Suggestions";
 import { viewportBox } from "./viewport";
 import "./Lens.css";
@@ -43,7 +42,7 @@ const readCell = (row: number, col: number): CellValue => sheet.getValue(cellKey
 // the answer for a whole block: the sum first, because that is what people are
 // almost always counting, and the rest underneath so nothing needs choosing
 function rangeView(range: Range): View {
-  const summary = summarize(rangeValues(range));
+  const summary = summaryOf(range);
   const { numbers } = summary;
 
   if (!numbers) {

@@ -4,10 +4,9 @@ import { bandOf } from "../core/geometry";
 import { type Doing, type List, hintsFor } from "../core/hints";
 import { isSingleCell } from "../core/range";
 import { selectionRange } from "../core/selection";
-import { summarize } from "../core/summary";
 import { offered, useEditing } from "../state/editing";
 import { useSelection } from "../state/selection";
-import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
+import { sheet, summaryOf, useSheetRevision } from "../state/sheet";
 import { Odometer } from "./Odometer";
 import "./StatusBar.css";
 
@@ -57,7 +56,7 @@ export function StatusBar() {
         kind: "selecting",
         multi: !isSingleCell(range),
         empty: behind === "",
-        numbers: summarize(rangeValues(range)).numbers !== null,
+        numbers: summaryOf(range).numbers !== null,
       };
 
   const hints = hintsFor(doing);

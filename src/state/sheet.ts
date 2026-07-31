@@ -1,8 +1,9 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { cellKey } from "../core/address";
 import type { CellValue } from "../core/formula/errors";
-import type { Range } from "../core/range";
+import { type Range, sameRange } from "../core/range";
 import { createSheet } from "../core/sheet/store";
+import { type Summary, summarize } from "../core/summary";
 import { setSelection } from "./selection";
 import { seed } from "./seed";
 
@@ -14,6 +15,23 @@ export function* rangeValues(range: Range): Generator<CellValue> {
   for (let row = range.top; row <= range.bottom; row++) {
     for (let col = range.left; col <= range.right; col++) yield sheet.getValue(cellKey(row, col));
   }
+}
+
+// what a block of cells adds up to. the lens and the status bar both describe
+// the selection and ask this in the same render, and a drag asks again for every
+// cell it crosses, so the walk is over the whole selection and it grows with it.
+// the answer only moves when the range or the sheet does, which is what makes
+// one held answer enough for every caller in the frame.
+let last: { range: Range; revision: number; summary: Summary } | null = null;
+
+export function summaryOf(range: Range): Summary {
+  const revision = sheet.revision();
+
+  if (!last || last.revision !== revision || !sameRange(last.range, range)) {
+    last = { range, revision, summary: summarize(rangeValues(range)) };
+  }
+
+  return last.summary;
 }
 
 export type CellView = {

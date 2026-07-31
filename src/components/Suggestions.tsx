@@ -12,9 +12,8 @@ import {
   swapFunction,
 } from "../core/formula/suggest";
 import { isSingleCell, rangeLabel } from "../core/range";
-import { summarize } from "../core/summary";
 import { type Editing, leaveDraftField, offered, setDraft, useEditing } from "../state/editing";
-import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
+import { sheet, summaryOf, useSheetRevision } from "../state/sheet";
 
 // what the range typed so far actually covers, which is where an off by one
 // range is caught: before it is committed rather than after the total looks odd
@@ -26,7 +25,7 @@ function argumentText(found: Extract<Suggestion, { kind: "argument" }>): string 
   // one cell has nothing to count, so the useful thing to show is what it holds
   if (isSingleCell(range)) return `${label} = ${sheet.getDisplay(cellKey(range.top, range.left))}`;
 
-  const summary = summarize(rangeValues(range));
+  const summary = summaryOf(range);
   const numbers = summary.numbers?.count ?? 0;
   const of = numbers === summary.cells ? "" : ` of ${summary.cells}`;
   return `${label} · ${numbers}${of} ${numbers === 1 ? "number" : "numbers"}`;
