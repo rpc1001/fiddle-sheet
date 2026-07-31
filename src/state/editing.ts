@@ -70,6 +70,13 @@ export function useEditing(): Editing {
   return useSyncExternalStore(store.subscribe, store.get);
 }
 
+// which cell is open and nothing else. the draft changes on every keystroke and
+// the cell does not, so anything that only needs to know where the editor is
+// asks this and stops re-rendering with the text.
+export function useEditingCell(): Address | null {
+  return useSyncExternalStore(store.subscribe, () => store.get()?.cell ?? null);
+}
+
 // what the draft is offering right now, with the highlight already wrapped to
 // the list it lands in. the editor takes keys on this, the panel draws it and
 // the status bar names it, so all three have to be reading the same answer.

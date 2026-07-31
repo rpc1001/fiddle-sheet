@@ -1,5 +1,5 @@
 import { type CSSProperties, useMemo } from "react";
-import { type CellKey, addressOf, cellKey } from "../core/address";
+import { type Address, type CellKey, addressOf, cellKey } from "../core/address";
 import { blocks } from "../core/blocks";
 import { draftReferences } from "../core/formula/scan";
 import { rectOf } from "../core/geometry";
@@ -51,19 +51,28 @@ function markElements(marks: Mark[]) {
 // what the selected cell reads, and what reads it, fading with every hop away.
 // direction is the colour, distance is the strength, and nothing is drawn
 // between cells: a line to a precedent forty rows up is a line to nowhere.
-function Marks() {
+function Marks({ open }: { open: Address | null }) {
   const selection = useSelection();
   const revision = useSheetRevision();
   const range = selectionRange(selection);
-  const at = isSingleCell(range) ? cellKey(range.top, range.left) : null;
+  const at = open
+    ? cellKey(open.row, open.col)
+    : isSingleCell(range)
+      ? cellKey(range.top, range.left)
+      : null;
+  const drafting = open !== null;
 
   // a range reference is one graph edge per cell, so this walks the whole range
   // and sorts it into blocks. arrowing across a wide SUM would do it per keypress.
   const marks = useMemo(() => {
     if (at === null) return null;
     const { inputs, outputs } = sheet.trace(at);
-    return [...marksFor(inputs, "input"), ...marksFor(outputs, "output")];
-  }, [at, revision]);
+    const read = marksFor(outputs, "output");
+    // an open cell reads whatever its draft names, which the draft marks
+    // already show and which changes on every keystroke. what reads the cell
+    // cannot change until the edit lands, so that half stays where it is.
+    return drafting ? read : [...marksFor(inputs, "input"), ...read];
+  }, [at, revision, drafting]);
 
   if (!marks) return null;
   return <>{markElements(marks)}</>;
@@ -117,7 +126,8 @@ export function TraceOverlay() {
 
   return (
     <>
-      {editing ? <DraftMarks text={editing.text} /> : <Marks />}
+      <Marks open={editing?.cell ?? null} />
+      {editing && <DraftMarks text={editing.text} />}
       <Ripple />
     </>
   );

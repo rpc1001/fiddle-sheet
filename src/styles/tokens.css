@@ -47,6 +47,9 @@
   --radius-pill: 999px;
 
   --shadow-float: 0 10px 30px rgb(var(--ink-rgb) / 0.15);
+  /* for something one cell tall sitting just off the page, rather than the
+     panels and the pill, which hover well above it */
+  --shadow-lift: 0 4px 12px rgb(var(--ink-rgb) / 0.1);
 
   --title-bar-h: 54px;
 

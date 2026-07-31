@@ -221,6 +221,23 @@
   transition-property: right, bottom;
 }
 
+/* the editor is the same 2px accent rectangle at the same cell, so while it
+   stands in for the box there is no reason to draw the box as well. it goes a
+   whole travel later though, not now: a double click opens the editor with the
+   box still in the air, and the box has to finish the move it started rather
+   than be dropped out of it. by then the editor is over it and taking it away
+   changes nothing on screen. a delayed animation, not the transition above,
+   which is busy carrying the box there. */
+.grid-selection.is-editing {
+  animation: hand-over 0s var(--travel-ms) forwards;
+}
+
+@keyframes hand-over {
+  to {
+    opacity: 0;
+  }
+}
+
 /* the whole box at one distance: an overshoot is then the position overshooting
    and nothing else, so this is the only case that gets the whip */
 .grid-selection.is-travelling,
@@ -241,10 +258,29 @@
   width: max-content;
   border: 2px solid var(--accent);
   border-radius: var(--radius-lg);
-  background: var(--paper);
-  box-shadow: var(--shadow-float);
+  background: var(--paper-lit);
+  box-shadow: var(--shadow-lift);
   font-family: var(--font-sans);
   font-size: var(--text-cell);
+  animation: editor-open var(--track-ms) var(--ease-track) backwards;
+}
+
+/* held until the box it stands in for has landed, so what opens is what
+   arrived. it opens the instant the box is still, which for a cell already
+   selected is the instant it is asked for. */
+.grid-editor.is-held {
+  opacity: 0;
+  animation: none;
+}
+
+/* the cell coming off the page: it gains the shadow it casts and the light it
+   catches, and nothing else moves. the draft has to open on the same pixel the
+   value was on, so the box cannot travel or scale to get there. */
+@keyframes editor-open {
+  from {
+    box-shadow: 0 0 0 rgb(var(--ink-rgb) / 0);
+    background: var(--paper);
+  }
 }
 
 .grid-editor.is-monospaced {
@@ -252,22 +288,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* the cell reads a number against its right edge, so the draft has to as well:
+   otherwise opening one throws the digits across the cell. ten rather than the
+   nine below because the cell keeps its right hand rule inside its own width and
+   the editor has no rule to keep. */
+.grid-editor.is-numeric .grid-editor-field {
+  padding-right: 10px;
+  text-align: right;
+}
+
 .grid-editor-mirror {
   display: block;
   visibility: hidden;
   /* the trailing room is the caret's, so it never sits on the border */
-  padding: 0 14px 0 10px;
+  padding: 0 13px 0 9px;
   white-space: pre;
   font: inherit;
   font-variant-numeric: inherit;
 }
 
+/* nine, not the cell's eleven: the border is drawn inside the box, so this is
+   what puts the draft on the same pixel the value was on */
 .grid-editor-field {
   position: absolute;
   inset: 0;
   width: 100%;
   margin: 0;
-  padding: 0 10px;
+  padding: 0 9px;
   border: none;
   border-radius: inherit;
   background: none;

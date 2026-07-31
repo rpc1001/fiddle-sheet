@@ -3,7 +3,9 @@ import {
   type KeyboardEvent,
   type RefObject,
   useEffect,
+  useLayoutEffect,
   useRef,
+  useState,
 } from "react";
 import { cellKey } from "../core/address";
 import { SHEET_WIDTH, clampAddress, rectOf } from "../core/geometry";
@@ -41,10 +43,57 @@ export function Editor({
   return <Draft key={cellKey(row, col)} editing={editing} viewport={viewport} onDone={onDone} />;
 }
 
+function isNumeric(text: string): boolean {
+  return text !== "" && !Number.isNaN(Number(text));
+}
+
 // a formula or a number reads as mono, the same as the cell underneath, so
 // opening the editor does not reshape the text
 function isMonospaced(text: string): boolean {
-  return text.startsWith("=") || (text !== "" && !Number.isNaN(Number(text)));
+  return text.startsWith("=") || isNumeric(text);
+}
+
+// the second click of a double click says the first one was not browsing: the
+// box is on its way to a cell that is about to be opened, so the rest of the
+// trip runs at this much of its own speed. the curve is unchanged, it is the
+// same move told to get on with it.
+const HURRY = 3;
+
+// a double click sets the selection on the first press and opens the editor on
+// the second, which is well inside the box's travel. the thing that arrives has
+// to be the thing that opens, so the draft holds until the box is still and
+// takes over where it lands. the box itself is asked, not a clock: it is the one
+// that knows, and a cell already selected has nothing running to wait for.
+function useHurriedLanding(viewport: RefObject<HTMLDivElement | null>): boolean {
+  const [held, setHeld] = useState(true);
+
+  useLayoutEffect(() => {
+    const box = viewport.current?.querySelector(".grid-selection");
+    // the hand over that hides the box is an animation on the same element, and
+    // it is not part of the trip
+    const flight = (box?.getAnimations() ?? []).filter((move) => move instanceof CSSTransition);
+
+    if (flight.length === 0) {
+      setHeld(false);
+      return;
+    }
+
+    for (const move of flight) move.updatePlaybackRate(HURRY);
+
+    let live = true;
+    const land = () => {
+      if (live) setHeld(false);
+    };
+    // a cancelled travel rejects, and a box that stopped travelling has landed
+    // as far as this is concerned
+    Promise.all(flight.map((move) => move.finished)).then(land, land);
+
+    return () => {
+      live = false;
+    };
+  }, [viewport]);
+
+  return held;
 }
 
 function Draft({
@@ -59,6 +108,7 @@ function Draft({
   const input = useRef<HTMLInputElement>(null);
   const done = useRef(false);
   const { cell, text, inserted } = editing;
+  const held = useHurriedLanding(viewport);
 
   // a click on the grid wrote a reference into the draft: put the caret after it
   useEffect(() => {
@@ -125,10 +175,12 @@ function Draft({
     maxWidth: Math.min(SHEET_WIDTH, view.scrollLeft + view.width) - box.left,
   } as CSSProperties;
 
-  const shape = isMonospaced(text) ? " is-monospaced" : "";
+  const shape = `${isMonospaced(text) ? " is-monospaced" : ""}${
+    isNumeric(text) ? " is-numeric" : ""
+  }`;
 
   return (
-    <div className={`grid-editor${shape}`} style={style}>
+    <div className={`grid-editor${shape}${held ? " is-held" : ""}`} style={style}>
       {/* the field grows because this hidden copy of the text sets the width */}
       <span className="grid-editor-mirror">{text}</span>
       <input

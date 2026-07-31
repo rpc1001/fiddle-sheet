@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
+import type { Address } from "../core/address";
 import { coversEveryColumn, coversEveryRow, insetOf, switchesAxis } from "../core/geometry";
-import { type Range, sameSize } from "../core/range";
-import { selectionRange } from "../core/selection";
+import { type Range, isSingleCell, sameSize } from "../core/range";
+import { sameCell, selectionRange } from "../core/selection";
+import { useEditingCell } from "../state/editing";
 import { useSelection } from "../state/selection";
 
 // how the box gets from the last selection to this one. an arrival is for a
@@ -12,10 +14,19 @@ function motionFrom(before: Range, after: Range): string {
   return sameSize(before, after) ? " is-travelling" : "";
 }
 
+// the editor draws the same rectangle at the same cell, so the box steps aside
+// for it. only when it is standing in for the whole selection: typing over a
+// range opens on one cell of it, and the rest of the range is still selected.
+function handedOver(range: Range, open: Address | null): boolean {
+  if (!open || !isSingleCell(range)) return false;
+  return sameCell({ row: range.top, col: range.left }, open);
+}
+
 // one positioned element for the whole selection, so extending it never touches
 // a cell. the only thing in the grid that re-renders during a drag.
 export function SelectionOverlay() {
   const range = selectionRange(useSelection());
+  const editing = handedOver(range, useEditingCell());
   const previous = useRef(range);
   const motion = motionFrom(previous.current, range);
 
@@ -34,7 +45,7 @@ export function SelectionOverlay() {
       <div
         className={`grid-selection${wholeColumns ? " is-capped-top" : ""}${
           wholeRows ? " is-capped-left" : ""
-        }${motion}`}
+        }${motion}${editing ? " is-editing" : ""}`}
         style={{ left: inset.left, top: inset.top, right: inset.right, bottom: inset.bottom }}
       />
       {/* the mark has to be its own element because it stays in the header while
