@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { type Address, columnLabel } from "../core/address";
+import { type Address, columnLabel, rowLabel } from "../core/address";
 import type { Band } from "../core/geometry";
 
-type Axis = "x" | "y";
+// which way a reel rolls, not a band of the sheet: the column rolls sideways and
+// the digits of the row roll vertically
+type Roll = "x" | "y";
 
-function offset(axis: Axis, percent: number): string {
-  return axis === "x" ? `translateX(${percent}%)` : `translateY(${percent}%)`;
+function offset(roll: Roll, percent: number): string {
+  return roll === "x" ? `translateX(${percent}%)` : `translateY(${percent}%)`;
 }
 
 // one glyph in a clipped box. when it changes the old one leaves and the new one
 // arrives, on the axis and in the direction the selection actually moved.
-function Reel({ glyph, axis, dir }: { glyph: string; axis: Axis; dir: number }) {
+function Reel({ glyph, axis, dir }: { glyph: string; axis: Roll; dir: number }) {
   const [shown, setShown] = useState({ glyph, leaving: "", turn: 0, dir });
   if (shown.glyph !== glyph) {
     setShown({ glyph, leaving: shown.glyph, turn: shown.turn + 1, dir });
@@ -57,7 +59,7 @@ export function Odometer({ address, band }: { address: Address; band: Band }) {
       {band !== "row" && <Reel glyph={columnLabel(seen.address.col)} axis="x" dir={seen.dx} />}
       {band !== "column" && (
         <span className="status-address-row">
-          {String(seen.address.row + 1)
+          {rowLabel(seen.address.row)
             .split("")
             .map((digit, place) => (
               <Reel key={place} glyph={digit} axis="y" dir={seen.dy} />

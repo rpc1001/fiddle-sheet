@@ -1,5 +1,5 @@
 import { Fragment, type RefObject, useEffect, useRef } from "react";
-import { columnLabel } from "../core/address";
+import { columnLabel, rowLabel } from "../core/address";
 import { COLS, ROWS } from "../core/geometry";
 import { useCell } from "../state/sheet";
 import { DropLine, QuoteGhost } from "./Drop";
@@ -65,7 +65,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         {rows.map((row) => (
           <Fragment key={row}>
             <div className="grid-gutter" data-row={row}>
-              {row + 1}
+              {rowLabel(row)}
             </div>
             {columns.map((col) => (
               <Cell key={col} row={row} col={col} />

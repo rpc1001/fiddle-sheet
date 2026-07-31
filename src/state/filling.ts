@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from "react";
-import type { CellKey } from "../core/address";
 import { type Reading, fillReadings } from "../core/fill";
 import { type Range, sameRange } from "../core/range";
 import { type Selection, selectionRange } from "../core/selection";
@@ -50,7 +49,7 @@ export function clearOffer(): void {
 // no pending state to keep, and every other part of the app goes on reading one
 // map of cells.
 export function applyFill(source: Range, extent: Range): void {
-  const readings = fillReadings((key: CellKey) => sheet.getRaw(key), source, extent);
+  const readings = fillReadings(sheet.getRaw, source, extent);
   if (readings.length === 0) return;
 
   const from = getSelection();

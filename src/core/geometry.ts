@@ -41,7 +41,9 @@ export function coversEveryColumn(range: Range): boolean {
   return range.left === 0 && range.right === COLS - 1;
 }
 
-export type Band = "column" | "row" | null;
+export type Axis = "column" | "row";
+
+export type Band = Axis | null;
 
 // a selection stretched to the far edge of the sheet is a band of whole columns
 // or whole rows, and it is named by the bands rather than by the corners it
@@ -53,7 +55,7 @@ export function bandOf(range: Range): Band {
   return null;
 }
 
-export type Zone ="corner" | "header" | "gutter" | "cell";
+export type Zone = "corner" | "header" | "gutter" | "cell";
 
 // x and y are relative to the visible window, not to the sheet: the header and
 // the gutter are stuck over its near edges and the cells scroll under them, so
@@ -62,8 +64,6 @@ export function zoneAtPoint(x: number, y: number): Zone {
   if (y < HEADER_HEIGHT) return x < GUTTER_WIDTH ? "corner" : "header";
   return x < GUTTER_WIDTH ? "gutter" : "cell";
 }
-
-export type Axis = "column" | "row";
 
 // where a band's track starts and how far apart its boundaries sit. columns run
 // across from the gutter, rows run down from the header, and everything else

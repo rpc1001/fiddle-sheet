@@ -26,6 +26,13 @@ describe("substitute", () => {
     expect(shown("(B1+B2)*2")).toBe("(12 + 4) × 2");
   });
 
+  // the same signs the operator buttons offer, so one subtraction is not typeset
+  // two ways an inch apart
+  it("spells every operator the way it reads on paper", () => {
+    expect(shown("B1-B2")).toBe("12 − 4");
+    expect(shown("B1/B2")).toBe("12 ÷ 4");
+  });
+
   it("leaves a range as its label, since listing every cell is unreadable", () => {
     expect(shown("SUM(B1:B3)")).toBe("SUM(B1:B3)");
   });

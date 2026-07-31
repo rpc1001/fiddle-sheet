@@ -104,6 +104,7 @@ export function useKeys(surface: Surface): Keys {
     const focus = selection.focus;
     const step = STEPS[event.key];
     const jump = event.metaKey || event.ctrlKey;
+    const fillAxis = isChord(event, "d") ? "down" : isChord(event, "r") ? "right" : null;
 
     if (step) {
       // held, the arrow covers the run rather than a cell of it. it is the one
@@ -117,12 +118,11 @@ export function useKeys(surface: Surface): Keys {
       );
     } else if (isChord(event, "a")) {
       setSelection(columnSpan(0, COLS - 1));
-    } else if (isChord(event, "d") || isChord(event, "r")) {
+    } else if (fillAxis) {
       // the fill handle's drag, keyed. the selection is both the source and how
       // far it reaches, which is the one thing a key press can say that a drag
       // has to be told: it is already on screen.
-      const axis = isChord(event, "d") ? "down" : "right";
-      sheet.edit(fillWrites(sheet.getRaw, selectionRange(selection), axis), selection, "fill");
+      sheet.edit(fillWrites(sheet.getRaw, selectionRange(selection), fillAxis), selection, "fill");
     } else if (event.key === " " && (event.ctrlKey || event.shiftKey)) {
       // the bands the selection already spans, named by the axis rather than
       // dragged along the header

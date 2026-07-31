@@ -6,7 +6,9 @@ import type { Read } from "./sheet/store";
 // one way of reading what the source cells were getting at, and the cells it
 // would write. the first is the one the fill applies; the rest are what the
 // user gets offered afterwards, and only when there is more than one.
-export type Reading = { name: string; writes: [CellKey, string][] };
+export type ReadingName = "count" | "copy";
+
+export type Reading = { name: ReadingName; writes: [CellKey, string][] };
 
 export type Direction = "down" | "up" | "right" | "left";
 
@@ -90,12 +92,12 @@ export function fillReadings(read: Read, source: Range, extent: Range): Reading[
   const sourceLength = direction === "down" || direction === "up" ? depth : across;
 
   // a single cell states no run of its own, so the drag says which way it runs
-  const alone = direction === "up" || direction === "left" ? -1 : 1;
+  const soloStep = direction === "up" || direction === "left" ? -1 : 1;
 
   const lanes = laneAddresses(source, extent, direction).map((cells) => {
     const sources = cells.slice(0, sourceLength);
     const texts = sources.map((cell) => read(cellKey(cell.row, cell.col)));
-    return { sources, texts, targets: cells.slice(sourceLength), step: stepOf(texts, alone) };
+    return { sources, texts, targets: cells.slice(sourceLength), step: stepOf(texts, soloStep) };
   });
 
   const names = lanes
@@ -116,7 +118,7 @@ type Lane = { texts: string[]; step: Step | null };
 
 // what this lane could honestly mean, best reading first. copy is the only one
 // that is always available, so a mixed selection always has something to write.
-function laneNames({ texts, step }: Lane): string[] {
+function laneNames({ texts, step }: Lane): ReadingName[] {
   if (!step) return ["copy"];
 
   // one cell states a value and nothing about a run, so both readings are open.
@@ -129,7 +131,7 @@ type Step = { prefix: string; last: number; by: number };
 
 // the run the source spells out, or null when it does not spell out one:
 // "2, 4, 6" steps by two, "hello" steps by nothing, "1, 2, 5" changes its mind
-function stepOf(texts: string[], alone: number): Step | null {
+function stepOf(texts: string[], soloStep: number): Step | null {
   const parts = texts.map(numberPart);
   if (parts.some((part) => part === null)) return null;
 
@@ -137,7 +139,7 @@ function stepOf(texts: string[], alone: number): Step | null {
   if (found.some((part) => part.prefix !== found[0]!.prefix)) return null;
 
   const last = found[found.length - 1]!;
-  if (found.length === 1) return { prefix: last.prefix, last: last.value, by: alone };
+  if (found.length === 1) return { prefix: last.prefix, last: last.value, by: soloStep };
 
   const by = found[1]!.value - found[0]!.value;
   for (let at = 1; at < found.length; at++) {

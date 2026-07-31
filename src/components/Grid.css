@@ -429,10 +429,6 @@
   cursor: grabbing;
 }
 
-/* the selection carried: its shape and its outline, in ink rather than accent
-   because the bands have not moved yet. the glow a selected header wears on one
-   edge is turned inward and run round the whole outline. no fill, so the sheet it
-   is being aimed across stays readable underneath. */
 /* the ghost hangs off the header, and the header stays where it is while the
    sheet scrolls under it, so the ghost has to as well. the rails answer the same
    question the same way: a sticky element can only travel inside its containing
@@ -461,6 +457,8 @@
   height: 100%;
 }
 
+/* ink rather than accent, since the bands have not moved yet, and no fill so the
+   sheet it is aimed across stays readable underneath */
 .grid-ghost {
   position: absolute;
   top: 0;

@@ -3,7 +3,7 @@ import { cellKey } from "../core/address";
 import { displayValue } from "../core/format";
 import { type CellValue, errorDisplay, isError } from "../core/formula/errors";
 import { explainError } from "../core/formula/explain";
-import { FUNCTIONS, OPERATORS, type SheetFunction } from "../core/formula/functions";
+import { FUNCTIONS, OPERATORS, SIGNS, type SheetFunction } from "../core/formula/functions";
 import { asWritten, canTakeOperator } from "../core/formula/scan";
 import {
   type Suggestion,
@@ -186,15 +186,15 @@ function Panel({ editing }: { editing: NonNullable<Editing> }) {
         <div className="lens-operators">
           {OPERATORS.map((operator) => (
             <button
-              key={operator.insert}
+              key={operator}
               type="button"
               className="lens-operator"
               onMouseDown={(event) => {
                 event.preventDefault();
-                setDraft(text + operator.insert);
+                setDraft(text + operator);
               }}
             >
-              {operator.sign}
+              {SIGNS[operator]}
             </button>
           ))}
         </div>

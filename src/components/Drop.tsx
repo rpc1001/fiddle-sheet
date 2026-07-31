@@ -1,6 +1,5 @@
-import { columnLabel } from "../core/address";
-import { COL_WIDTH, ROW_HEIGHT, gapOffset, rectOf } from "../core/geometry";
-import { rangeAt } from "../core/range";
+import { gapOffset, rectOf } from "../core/geometry";
+import { bandLabel, rangeAt } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { useMoving } from "../state/moving";
 import { useQuoting } from "../state/quoting";
@@ -15,9 +14,8 @@ export function DropLine() {
   if (!carry) return null;
 
   const column = carry.axis === "column";
-  const label = column
-    ? bandLabel(columnLabel(range.left), columnLabel(range.right))
-    : bandLabel(String(range.top + 1), String(range.bottom + 1));
+  const box = rectOf(range);
+  const label = bandLabel(range, carry.axis);
 
   return (
     <>
@@ -29,14 +27,8 @@ export function DropLine() {
             className={column ? "grid-ghost" : "grid-ghost is-row"}
             style={
               column
-                ? {
-                    left: carry.offset,
-                    width: (range.right - range.left + 1) * COL_WIDTH,
-                  }
-                : {
-                    top: carry.offset,
-                    height: (range.bottom - range.top + 1) * ROW_HEIGHT,
-                  }
+                ? { left: carry.offset, width: box.width }
+                : { top: carry.offset, height: box.height }
             }
           >
             <div className="grid-ghost-label">{label}</div>
@@ -51,10 +43,6 @@ export function DropLine() {
       />
     </>
   );
-}
-
-function bandLabel(first: string, last: string): string {
-  return first === last ? first : `${first}:${last}`;
 }
 
 // the formula a carried block would write, hanging off the pointer, and the

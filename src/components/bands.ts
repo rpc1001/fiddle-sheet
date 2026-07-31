@@ -1,4 +1,4 @@
-import type { Address, CellKey } from "../core/address";
+import type { Address } from "../core/address";
 import {
   COLS,
   type Axis,
@@ -41,12 +41,11 @@ export function bandPickedUp(zone: Zone, cell: Address): Axis | null {
 export function dropBand(axis: Axis, gap: number): void {
   const before = getSelection();
   const range = selectionRange(before);
-  const read = (key: CellKey) => sheet.getRaw(key);
 
   const move =
     axis === "column"
-      ? moveColumns(read, range.left, range.right, gap)
-      : moveRows(read, range.top, range.bottom, gap);
+      ? moveColumns(sheet.getRaw, range.left, range.right, gap)
+      : moveRows(sheet.getRaw, range.top, range.bottom, gap);
 
   // the history entry keeps the band where it was picked up, so undoing puts
   // both the cells and the selection back where they started

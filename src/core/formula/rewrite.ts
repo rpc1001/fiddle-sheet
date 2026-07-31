@@ -1,4 +1,4 @@
-import { columnIndex, columnLabel, parseAddress } from "../address";
+import { columnIndex, columnLabel, parseAddress, rowLabel } from "../address";
 import { COLS, ROWS } from "../geometry";
 import { CHUNK } from "./scan";
 
@@ -12,7 +12,7 @@ export type Side = {
   rowPinned: boolean;
 };
 
-export function parseSide(text: string): Side | null {
+function parseSide(text: string): Side | null {
   const colPinned = text.startsWith("$");
   const rowPinned = /\$\d+$/.test(text);
 
@@ -26,14 +26,14 @@ export function parseSide(text: string): Side | null {
 // a side that has been moved off the sheet cannot be written down, and #REF is
 // both what a spreadsheet calls that and something the parser will refuse, so
 // the cell ends up visibly broken rather than quietly pointing somewhere else
-export function sideText(side: Side): string {
+function sideText(side: Side): string {
   if (side.col < 0 || side.col >= COLS) return "#REF";
   if (side.row !== null && (side.row < 0 || side.row >= ROWS)) return "#REF";
 
   const column = (side.colPinned ? "$" : "") + columnLabel(side.col);
   if (side.row === null) return column;
 
-  return column + (side.rowPinned ? "$" : "") + (side.row + 1);
+  return column + (side.rowPinned ? "$" : "") + rowLabel(side.row);
 }
 
 // every reference in a formula, put through move and written back. plain text is

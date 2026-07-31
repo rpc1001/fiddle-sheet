@@ -1,4 +1,5 @@
-import { type Address, addressLabel } from "./address";
+import { type Address, addressLabel, columnLabel, rowLabel } from "./address";
+import type { Axis } from "./geometry";
 
 export type Range = { top: number; left: number; bottom: number; right: number };
 
@@ -42,6 +43,17 @@ export function rangeLabel(range: Range): string {
   const start = addressLabel({ row: range.top, col: range.left });
   if (isSingleCell(range)) return start;
   return `${start}:${addressLabel({ row: range.bottom, col: range.right })}`;
+}
+
+// a band is named by the bands it covers rather than by the corners it happens to
+// have: C, or C:D. one band collapses to one name, the same rule rangeLabel uses.
+export function bandLabel(range: Range, axis: Axis): string {
+  const [first, last] =
+    axis === "column"
+      ? [columnLabel(range.left), columnLabel(range.right)]
+      : [rowLabel(range.top), rowLabel(range.bottom)];
+
+  return first === last ? first : `${first}:${last}`;
 }
 
 export function* cellsIn(range: Range): Generator<Address> {

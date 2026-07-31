@@ -2,12 +2,14 @@ import { parseAddress } from "../address";
 import type { Range } from "../range";
 import { referenceRange } from "./scan";
 
+export type Operator = "+" | "-" | "*" | "/";
+
 export type Node =
   | { kind: "number"; value: number }
   | { kind: "ref"; row: number; col: number }
   | { kind: "range"; range: Range }
   | { kind: "negate"; operand: Node }
-  | { kind: "binary"; op: "+" | "-" | "*" | "/"; left: Node; right: Node }
+  | { kind: "binary"; op: Operator; left: Node; right: Node }
   | { kind: "call"; name: string; args: Node[] };
 
 // deliberately not an Error, for the same reason as Failure in evaluate.ts:
@@ -16,7 +18,7 @@ export class ParseError {
   constructor(readonly message: string) {}
 }
 
-type Punctuation = "+" | "-" | "*" | "/" | "(" | ")" | "," | ":";
+type Punctuation = Operator | "(" | ")" | "," | ":";
 
 type Token =
   | { type: "number"; value: number }

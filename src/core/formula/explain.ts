@@ -3,14 +3,8 @@ import { displayValue, formatNumber } from "../format";
 import { rangeLabel } from "../range";
 import type { CellError, CellValue } from "./errors";
 import type { ReadCell } from "./evaluate";
-import type { Node } from "./parse";
-
-const SIGNS: Record<"+" | "-" | "*" | "/", string> = {
-  "+": "+",
-  "-": "-",
-  "*": "×",
-  "/": "÷",
-};
+import { SIGNS } from "./functions";
+import type { Node, Operator } from "./parse";
 
 // the formula with every reference swapped for what it currently holds, so
 // "=B2*C2" reads as "12 × 4" without opening the cells it names
@@ -41,7 +35,7 @@ export function substitute(node: Node, readCell: ReadCell): string {
 
 // "=(A1+A2)*2" has to keep its brackets once the references are gone, or the
 // substituted line says something the formula does not
-function grouped(node: Node, parent: "+" | "-" | "*" | "/", readCell: ReadCell): string {
+function grouped(node: Node, parent: Operator, readCell: ReadCell): string {
   const text = substitute(node, readCell);
   const loose = node.kind === "binary" && (node.op === "+" || node.op === "-");
   return loose && (parent === "*" || parent === "/") ? `(${text})` : text;

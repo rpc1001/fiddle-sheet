@@ -10,7 +10,7 @@
   box-shadow:
     inset 0 1px 0 var(--rim),
     var(--shadow-float);
-  animation: lens-in 140ms ease-out;
+  animation: lens-in var(--track-ms) var(--ease-track);
   /* travels with the selection it is reading, on the selection's own curve */
   transition-property: left, top, opacity;
   transition-duration: var(--travel-ms);

@@ -27,8 +27,8 @@ export function fillWrites(read: Read, range: Range, axis: "down" | "right"): [C
   // one cell selected states a target and no source, so the source is the cell
   // it is being filled from: the one above, or the one to its left. a block
   // states both, and its own first row or column is what runs through it.
-  const alone = isSingleCell(range);
-  const from = axis === "down" ? range.top - Number(alone) : range.left - Number(alone);
+  const back = isSingleCell(range) ? 1 : 0;
+  const from = axis === "down" ? range.top - back : range.left - back;
   if (from < 0) return [];
 
   const source =

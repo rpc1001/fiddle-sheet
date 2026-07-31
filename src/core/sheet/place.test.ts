@@ -27,8 +27,12 @@ describe("placeOf", () => {
     expect(placeIn(columnSpan(1, 2))).toBe("B:C");
   });
 
-  it("names a single column band as a band", () => {
-    expect(placeIn(columnSpan(2, 2))).toBe("C:C");
+  it("names one column by the header it carries, the way the ghost does", () => {
+    expect(placeIn(columnSpan(2, 2))).toBe("C");
+  });
+
+  it("names one row the same way", () => {
+    expect(placeIn(rowSpan(4, 4))).toBe("5");
   });
 
   it("names a band of rows by its numbers", () => {

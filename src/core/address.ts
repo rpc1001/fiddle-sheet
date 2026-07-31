@@ -6,6 +6,11 @@ export function columnLabel(col: number): string {
   return String.fromCharCode(A + col);
 }
 
+// rows are stored from zero and read from one, everywhere they are shown
+export function rowLabel(row: number): string {
+  return String(row + 1);
+}
+
 // a leading "$" pins the column against a fill and says nothing about which
 // column it is, so every reader that only wants the letter can ignore it
 export function columnIndex(label: string): number | null {
@@ -18,7 +23,7 @@ export function columnIndex(label: string): number | null {
 export type Address = { row: number; col: number };
 
 export function addressLabel(address: Address): string {
-  return `${columnLabel(address.col)}${address.row + 1}`;
+  return `${columnLabel(address.col)}${rowLabel(address.row)}`;
 }
 
 // one number per cell, so the store and the dependency graph can key plain maps
