@@ -11,11 +11,12 @@ import { cellKey } from "../core/address";
 import { SHEET_WIDTH, clampAddress, rectOf } from "../core/geometry";
 import { rangeAt } from "../core/range";
 import { selectionAt } from "../core/selection";
-import { balanceBrackets } from "../core/formula/scan";
+import { balanceBrackets, expandColumns } from "../core/formula/scan";
 import { acceptSuggestion } from "../core/formula/suggest";
 import {
   type Editing,
   dismissSuggestions,
+  enterList,
   moveHighlight,
   offered,
   setDraft,
@@ -122,7 +123,8 @@ function Draft({
     if (done.current) return;
     done.current = true;
 
-    sheet.edit([[cellKey(cell.row, cell.col), balanceBrackets(text)]], selectionAt(cell));
+    const written = balanceBrackets(expandColumns(text));
+    sheet.edit([[cellKey(cell.row, cell.col), written]], selectionAt(cell));
     stopEditing();
     if (rowStep !== 0 || colStep !== 0) {
       setSelection(selectionAt(clampAddress(cell.row + rowStep, cell.col + colStep)));
@@ -138,14 +140,18 @@ function Draft({
 
   // the suggestion list borrows the keys it needs and hands the rest back, so
   // the field behaves like a field the moment the list is not there
-  const { suggestion, highlight } = offered(editing);
+  const { suggestion, highlight, taking } = offered(editing);
   const names = suggestion?.kind === "functions" ? suggestion.matches : null;
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    // the arrows reach the list whether or not it has been asked for, since
+    // going into it is how it gets asked for
     if (names && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
-      moveHighlight(event.key === "ArrowDown" ? 1 : -1, names.length);
-    } else if (names && (event.key === "Enter" || event.key === "Tab")) {
+      const down = event.key === "ArrowDown";
+      if (taking) moveHighlight(down ? 1 : -1, names.length);
+      else enterList(down ? 0 : names.length - 1);
+    } else if (taking && names && (event.key === "Enter" || event.key === "Tab")) {
       event.preventDefault();
       setDraft(acceptSuggestion(text, names[highlight]!.name));
     } else if (event.key === "Enter") {

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { cellKey } from "../core/address";
 import { bandOf } from "../core/geometry";
-import { type Doing, hintsFor } from "../core/hints";
+import { type Doing, type List, hintsFor } from "../core/hints";
 import { isSingleCell } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { offered, useEditing } from "../state/editing";
@@ -47,12 +47,12 @@ export function StatusBar() {
   // while editing this shows the draft, not what is still stored underneath it
   const behind = editing?.text ?? sheet.getRaw(cellKey(focus.row, focus.col));
 
+  const shown = offered(editing);
+  const list: List =
+    shown.suggestion?.kind !== "functions" ? "none" : shown.taking ? "taking" : "showing";
+
   const doing: Doing = editing
-    ? {
-        kind: "editing",
-        formula: editing.text.startsWith("="),
-        choosing: offered(editing).suggestion?.kind === "functions",
-      }
+    ? { kind: "editing", formula: editing.text.startsWith("="), list }
     : {
         kind: "selecting",
         multi: !isSingleCell(range),

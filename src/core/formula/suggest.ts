@@ -3,8 +3,11 @@ import { FUNCTIONS, type SheetFunction, functionsStartingWith } from "./function
 import { draftReferences } from "./scan";
 
 export type Suggestion =
-  // a name is being typed and these are the functions it could still become
-  | { kind: "functions"; matches: SheetFunction[] }
+  // the functions a name could still become. typed says whether the list is
+  // narrowing something the user has written or is the whole menu offered
+  // unprompted, which is the difference between a list they are using and a
+  // list that is merely open.
+  | { kind: "functions"; matches: SheetFunction[]; typed: boolean }
   // the brackets are open, so the useful thing to say is what the argument
   // covers, or what the function wants when nothing has been typed yet
   | { kind: "argument"; name: string; summary: string | null; range: Range | null }
@@ -29,7 +32,7 @@ export function suggest(text: string): Suggestion {
   const partial = partialName(text);
   if (partial) {
     const matches = functionsStartingWith(partial);
-    return matches.length > 0 ? { kind: "functions", matches } : null;
+    return matches.length > 0 ? { kind: "functions", matches, typed: true } : null;
   }
 
   const call = openCall(text);
@@ -46,7 +49,7 @@ export function suggest(text: string): Suggestion {
   }
 
   // nothing typed yet: show what there is rather than making it be guessed
-  if (WANTS_NAME.test(text)) return { kind: "functions", matches: [...FUNCTIONS] };
+  if (WANTS_NAME.test(text)) return { kind: "functions", matches: [...FUNCTIONS], typed: false };
 
   return null;
 }

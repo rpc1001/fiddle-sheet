@@ -13,6 +13,9 @@ export type Editing = {
   inserted: Span | null;
   // which function in the suggestion list the keyboard is on
   highlight: number;
+  // whether the keyboard has been into the list. a list that opened on its own
+  // and has not been touched does not get to take enter off the cell.
+  picked: boolean;
   // escape closes the list before it cancels the edit
   dismissed: boolean;
 } | null;
@@ -31,14 +34,16 @@ function suggestionFor(text: string): Suggestion {
 export const getEditing = store.get;
 
 export function startEditing(cell: Address, text: string): void {
-  store.set({ cell, text, inserted: null, highlight: 0, dismissed: false });
+  store.set({ cell, text, inserted: null, highlight: 0, picked: false, dismissed: false });
 }
 
 // typing invalidates the insertion point: whatever is at the end is now yours.
 // it also reopens the list, since the name being typed has changed.
 export function setDraft(text: string): void {
   const editing = store.get();
-  if (editing) store.set({ ...editing, text, inserted: null, highlight: 0, dismissed: false });
+  if (editing) {
+    store.set({ ...editing, text, inserted: null, highlight: 0, picked: false, dismissed: false });
+  }
 }
 
 export function setInsertedDraft(text: string, inserted: Span): void {
@@ -46,15 +51,18 @@ export function setInsertedDraft(text: string, inserted: Span): void {
   if (editing) store.set({ ...editing, text, inserted });
 }
 
-export function setHighlight(highlight: number): void {
-  const editing = store.get();
-  if (editing) store.set({ ...editing, highlight });
-}
-
 export function moveHighlight(step: number, count: number): void {
   const editing = store.get();
   if (!editing || count === 0) return;
   store.set({ ...editing, highlight: (editing.highlight + step + count) % count });
+}
+
+// the first arrow into a list that opened by itself takes the end it came in
+// from rather than stepping off it: the top entry is already under the highlight,
+// and moving would skip the very thing being pointed at
+export function enterList(highlight: number): void {
+  const editing = store.get();
+  if (editing) store.set({ ...editing, highlight, picked: true });
 }
 
 export function dismissSuggestions(): void {
@@ -80,10 +88,23 @@ export function useEditingCell(): Address | null {
 // what the draft is offering right now, with the highlight already wrapped to
 // the list it lands in. the editor takes keys on this, the panel draws it and
 // the status bar names it, so all three have to be reading the same answer.
-export function offered(editing: Editing): { suggestion: Suggestion; highlight: number } {
-  if (!editing || editing.dismissed) return { suggestion: null, highlight: 0 };
+// taking is whether enter belongs to the list rather than to the cell: a list
+// narrowing a name that is being typed has been asked for, and one that opened
+// by itself after "=" has not been, until the arrows go into it.
+export function offered(editing: Editing): {
+  suggestion: Suggestion;
+  highlight: number;
+  taking: boolean;
+} {
+  if (!editing || editing.dismissed) return { suggestion: null, highlight: 0, taking: false };
 
   const suggestion = suggestionFor(editing.text);
-  const count = suggestion?.kind === "functions" ? suggestion.matches.length : 0;
-  return { suggestion, highlight: count > 0 ? editing.highlight % count : 0 };
+  const list = suggestion?.kind === "functions" ? suggestion : null;
+  const count = list?.matches.length ?? 0;
+
+  return {
+    suggestion,
+    highlight: count > 0 ? editing.highlight % count : 0,
+    taking: list !== null && (list.typed || editing.picked),
+  };
 }

@@ -46,6 +46,29 @@ export function canTakeOperator(text: string): boolean {
 
 // "=SUM(B2:B7" commits as "=SUM(B2:B7)". the closing bracket carries no meaning
 // of its own here, so asking for it is a rule with nothing behind it.
+// "=SUM(C" commits as "=SUM(C:C". naming a column once names all of it, and the
+// second half of C:C repeats what has already been said: the same argument as
+// the bracket below. a letter followed by "(" is a function being called, not a
+// column, however unknown that function turns out to be.
+export function expandColumns(text: string): string {
+  if (!text.startsWith("=")) return text;
+
+  let out = "";
+  let cut = 0;
+
+  for (const match of text.matchAll(CHUNK)) {
+    const chunk = match[0];
+    const at = match.index;
+    if (chunk.includes(":") || columnIndex(chunk) === null) continue;
+    if (text[at + chunk.length] === "(") continue;
+
+    out += text.slice(cut, at) + `${chunk}:${chunk}`;
+    cut = at + chunk.length;
+  }
+
+  return out + text.slice(cut);
+}
+
 export function balanceBrackets(text: string): string {
   if (!text.startsWith("=")) return text;
 

@@ -8,7 +8,7 @@ import { canTakeOperator } from "../core/formula/scan";
 import { type Suggestion, acceptSuggestion } from "../core/formula/suggest";
 import { isSingleCell, rangeLabel } from "../core/range";
 import { summarize } from "../core/summary";
-import { type Editing, offered, setDraft, setHighlight, useEditing } from "../state/editing";
+import { type Editing, offered, setDraft, useEditing } from "../state/editing";
 import { rangeValues, sheet, useSheetRevision } from "../state/sheet";
 
 // what the range typed so far actually covers, which is where an off by one
@@ -59,7 +59,7 @@ export function DraftPanel() {
 // things that do not change either: the highlight moving, the selection, a hover
 function Panel({ editing }: { editing: NonNullable<Editing> }) {
   const { text } = editing;
-  const { suggestion, highlight } = offered(editing);
+  const { suggestion, highlight, taking } = offered(editing);
   const revision = useSheetRevision();
 
   // the revision is in the dependencies because both of these read the sheet
@@ -82,13 +82,14 @@ function Panel({ editing }: { editing: NonNullable<Editing> }) {
           {suggestion.matches.map((entry, index) => (
             <li
               key={entry.name}
-              className={index === highlight ? "lens-option is-on" : "lens-option"}
+              // lit means enter takes it, so a list that has not been asked for
+              // lights nothing: the mark and the key have to agree
+              className={taking && index === highlight ? "lens-option is-on" : "lens-option"}
               // the press must not reach the input: a blur there commits the cell
               onMouseDown={(event) => {
                 event.preventDefault();
                 setDraft(acceptSuggestion(text, entry.name));
               }}
-              onMouseEnter={() => setHighlight(index)}
             >
               <span className="lens-option-name">{entry.name}</span>
               <span className="lens-option-summary">{entry.summary}</span>

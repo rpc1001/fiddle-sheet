@@ -21,6 +21,19 @@ describe("suggest", () => {
     expect(names("=C")).toEqual(["COUNT"]);
   });
 
+  // the list that opened by itself must not be able to take enter off the cell,
+  // and this is the only thing that tells the two apart
+  it("says whether the list is narrowing something that was typed", () => {
+    const typed = (text: string) => {
+      const found = suggest(text);
+      return found?.kind === "functions" ? found.typed : null;
+    };
+
+    expect(typed("=S")).toBe(true);
+    expect(typed("=")).toBe(false);
+    expect(typed("=A1+")).toBe(false);
+  });
+
   it("offers nothing for a name that matches none of them", () => {
     expect(suggest("=ZZ")).toBeNull();
   });

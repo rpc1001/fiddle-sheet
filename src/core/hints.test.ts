@@ -20,12 +20,21 @@ describe("hintsFor", () => {
   });
 
   it("mentions clicking a cell only while a formula is open", () => {
-    expect(keys(hintsFor({ kind: "editing", formula: true, choosing: false }))).toContain("click");
-    expect(keys(hintsFor({ kind: "editing", formula: false, choosing: false }))).not.toContain("click");
+    expect(keys(hintsFor({ kind: "editing", formula: true, list: "none" }))).toContain("click");
+    expect(keys(hintsFor({ kind: "editing", formula: false, list: "none" }))).not.toContain("click");
   });
 
-  it("hands the keys to the suggestion list while it is open", () => {
-    expect(keys(hintsFor({ kind: "editing", formula: true, choosing: true }))).toEqual([
+  it("leaves enter with the cell while the list is only open", () => {
+    expect(keys(hintsFor({ kind: "editing", formula: true, list: "showing" }))).toEqual([
+      "↑↓",
+      "↵",
+      "esc",
+    ]);
+    expect(hintsFor({ kind: "editing", formula: true, list: "showing" })[1]!.label).toBe("save");
+  });
+
+  it("hands the keys to the suggestion list once it is being used", () => {
+    expect(keys(hintsFor({ kind: "editing", formula: true, list: "taking" }))).toEqual([
       "↑↓",
       "↵",
       "esc",
@@ -37,8 +46,10 @@ describe("hintsFor", () => {
       hintsFor({ kind: "selecting", multi: false, empty: true }),
       hintsFor({ kind: "selecting", multi: false, empty: false }),
       hintsFor({ kind: "selecting", multi: true, empty: false }),
-      hintsFor({ kind: "editing", formula: true, choosing: false }),
-      hintsFor({ kind: "editing", formula: false, choosing: false }),
+      hintsFor({ kind: "editing", formula: true, list: "none" }),
+      hintsFor({ kind: "editing", formula: false, list: "none" }),
+      hintsFor({ kind: "editing", formula: true, list: "showing" }),
+      hintsFor({ kind: "editing", formula: true, list: "taking" }),
     ].flat();
     for (const hint of every) expect(hint.label.split(" ").length).toBeLessThanOrEqual(2);
   });
@@ -48,8 +59,10 @@ describe("hintsFor", () => {
       hintsFor({ kind: "selecting", multi: false, empty: true }),
       hintsFor({ kind: "selecting", multi: false, empty: false }),
       hintsFor({ kind: "selecting", multi: true, empty: false }),
-      hintsFor({ kind: "editing", formula: true, choosing: false }),
-      hintsFor({ kind: "editing", formula: false, choosing: false }),
+      hintsFor({ kind: "editing", formula: true, list: "none" }),
+      hintsFor({ kind: "editing", formula: false, list: "none" }),
+      hintsFor({ kind: "editing", formula: true, list: "showing" }),
+      hintsFor({ kind: "editing", formula: true, list: "taking" }),
     ];
     for (const hints of every) expect(hints.length).toBeLessThanOrEqual(3);
   });

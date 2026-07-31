@@ -2,9 +2,14 @@ export type Hint = { keys: string; label: string };
 
 // what the sheet is being used for right now. the hints follow from this and
 // nothing else, which keeps them out of the components.
+// the suggestion list is in one of three states, not two: closed, open but not
+// asked for, and holding the keys. the middle one is the whole reason this is
+// not a boolean, since the arrows reach a list that enter does not.
+export type List = "none" | "showing" | "taking";
+
 export type Doing =
   | { kind: "selecting"; multi: boolean; empty: boolean }
-  | { kind: "editing"; formula: boolean; choosing: boolean };
+  | { kind: "editing"; formula: boolean; list: List };
 
 const SAVE: Hint = { keys: "↵", label: "save" };
 const CANCEL: Hint = { keys: "esc", label: "cancel" };
@@ -14,12 +19,18 @@ const CLEAR: Hint = { keys: "⌫", label: "clear" };
 export function hintsFor(doing: Doing): Hint[] {
   if (doing.kind === "editing") {
     // the list has taken the keys, so saying they still save would be a lie
-    if (doing.choosing) {
+    if (doing.list === "taking") {
       return [
         { keys: "↑↓", label: "pick" },
         { keys: "↵", label: "insert" },
         { keys: "esc", label: "close" },
       ];
+    }
+
+    // open and untouched: enter is still the cell's, and the arrows are how the
+    // list gets used at all, which is worth saying since nothing else says it
+    if (doing.list === "showing") {
+      return [{ keys: "↑↓", label: "pick" }, SAVE, CANCEL];
     }
     if (!doing.formula) return [SAVE, CANCEL];
     return [{ keys: "click", label: "add cell" }, SAVE, CANCEL];
