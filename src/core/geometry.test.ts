@@ -8,6 +8,7 @@ import {
   ROWS,
   SHEET_HEIGHT,
   SHEET_WIDTH,
+  bandOf,
   cellAtPoint,
   gapAtPoint,
   gapOffset,
@@ -219,6 +220,22 @@ describe("insetOf", () => {
     expect(insetOf(column).top).toBe(HEADER_HEIGHT);
     expect(insetOf(column).bottom).toBe(0);
     expect(insetOf(whole)).toEqual({ left: GUTTER_WIDTH, top: HEADER_HEIGHT, right: 0, bottom: 0 });
+  });
+});
+
+describe("bandOf", () => {
+  it("names a selection that reaches both far edges of an axis", () => {
+    expect(bandOf({ top: 0, left: 2, bottom: ROWS - 1, right: 4 })).toBe("column");
+    expect(bandOf({ top: 5, left: 0, bottom: 5, right: COLS - 1 })).toBe("row");
+  });
+
+  it("reads the whole sheet as columns, which names every cell in it", () => {
+    expect(bandOf({ top: 0, left: 0, bottom: ROWS - 1, right: COLS - 1 })).toBe("column");
+  });
+
+  it("is nothing for a selection short of an edge", () => {
+    expect(bandOf({ top: 0, left: 2, bottom: ROWS - 2, right: 2 })).toBe(null);
+    expect(bandOf({ top: 3, left: 3, bottom: 3, right: 3 })).toBe(null);
   });
 });
 

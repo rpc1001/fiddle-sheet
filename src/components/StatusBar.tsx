@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { cellKey } from "../core/address";
+import { bandOf } from "../core/geometry";
 import { type Doing, hintsFor } from "../core/hints";
 import { isSingleCell } from "../core/range";
 import { selectionRange } from "../core/selection";
@@ -68,16 +69,17 @@ export function StatusBar() {
   const hints = hintsFor(doing);
   const formula = behind.startsWith("=");
   const single = isSingleCell(range);
+  const band = bandOf(range);
 
   return (
     <div className="status-bar" style={{ width }}>
       <div className="status-row" ref={row}>
         <span className={formula ? "status-ref is-formula" : "status-ref"}>
-          <Odometer address={{ row: range.top, col: range.left }} />
+          <Odometer address={{ row: range.top, col: range.left }} band={band} />
           {!single && (
             <>
               <span className="status-ref-join">:</span>
-              <Odometer address={{ row: range.bottom, col: range.right }} />
+              <Odometer address={{ row: range.bottom, col: range.right }} band={band} />
             </>
           )}
         </span>

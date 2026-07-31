@@ -41,6 +41,18 @@ export function coversEveryColumn(range: Range): boolean {
   return range.left === 0 && range.right === COLS - 1;
 }
 
+export type Band = "column" | "row" | null;
+
+// a selection stretched to the far edge of the sheet is a band of whole columns
+// or whole rows, and it is named by the bands rather than by the corners it
+// happens to have: C:C, not C1:C100. select all covers both, and reading it as
+// columns is the one that names every cell in it.
+export function bandOf(range: Range): Band {
+  if (coversEveryRow(range)) return "column";
+  if (coversEveryColumn(range)) return "row";
+  return null;
+}
+
 export type Zone ="corner" | "header" | "gutter" | "cell";
 
 // x and y are relative to the visible window, not to the sheet: the header and
