@@ -17,11 +17,9 @@ export function* rangeValues(range: Range): Generator<CellValue> {
   }
 }
 
-// what a block of cells adds up to. the lens and the status bar both describe
-// the selection and ask this in the same render, and a drag asks again for every
-// cell it crosses, so the walk is over the whole selection and it grows with it.
-// the answer only moves when the range or the sheet does, which is what makes
-// one held answer enough for every caller in the frame.
+// what a block of cells adds up to. three components ask in the same render and
+// a drag asks again for every cell it crosses, so the one answer is held: it can
+// only move when the range or the sheet does.
 let last: { range: Range; revision: number; summary: Summary } | null = null;
 
 export function summaryOf(range: Range): Summary {

@@ -65,10 +65,9 @@ function movedChunk(chunk: string, move: (side: Side) => Side): string | null {
   return sides.map((side) => sideText(move(side!))).join(":");
 }
 
-// a formula copied to a cell rowStep down and colStep across, with its references
-// carried the same distance. this is what makes a column of "=A2*B2" out of one
-// cell: the formula says the same thing about a different row. a pinned side stays
-// where it is, which is the only reason pins exist.
+// a formula copied rowStep down and colStep across, references carried the same
+// distance, which is what makes a column of "=A2*B2" out of one cell. a pinned
+// side stays where it is.
 export function offsetFormula(text: string, rowStep: number, colStep: number): string {
   if (rowStep === 0 && colStep === 0) return text;
 

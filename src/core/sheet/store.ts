@@ -43,14 +43,13 @@ export type Sheet = {
   // what a draft would be worth if it were committed now. nothing is written,
   // so an uncommitted formula can be answered before it lands.
   preview(raw: string): CellValue;
-  // the only way in: one call is one undoable action, whatever it touches.
-  // the selection travels with it so undo can return you to it, and the action
-  // says which of them it was, which the writes alone cannot.
+  // the only way in: one call is one undoable action, whatever it touches. the
+  // selection travels with it so undo can return you to where it happened.
   edit(writes: Iterable<[CellKey, string]>, selection: Selection, action: Action): void;
-  // the last action, done a different way. it is rolled back and replaced, so
-  // reading a fill one way and then the other leaves one action in history
-  // rather than a correction stacked on a guess. only the caller that made the
-  // action may call this, and only while it is still the last one.
+  // the last action, done a different way: rolled back and replaced, so reading
+  // a fill twice leaves one action in history rather than a correction stacked on
+  // a guess. only the caller that made the action may call this, and only while
+  // it is still the last one.
   revise(writes: Iterable<[CellKey, string]>, selection: Selection, action: Action): void;
   // both return the selection to restore, or null when there was nothing to do
   undo(): Selection | null;
@@ -186,10 +185,9 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
 
     edit,
 
-    // undo lifts the entry onto the redo branch and the rollback puts the cells
-    // back with it, which leaves the sheet exactly as it was before the action.
-    // the new writes are then an ordinary edit: their before values are the
-    // original ones, and recording abandons the branch the undo just made.
+    // rolling the entry back leaves the sheet exactly as it was before the
+    // action, so the new writes are then an ordinary edit over the original
+    // values, and recording abandons the redo branch the undo just made.
     revise(writes, selection, action) {
       const entry = history.undo();
       if (!entry) return;

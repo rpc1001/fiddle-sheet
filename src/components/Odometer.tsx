@@ -40,10 +40,9 @@ function Reel({ glyph, axis, dir }: { glyph: string; axis: Roll; dir: number }) 
   );
 }
 
-// the column rolls sideways and the row rolls vertically, so the address moves
-// the way the selection did. the direction has to be read at the moment the
-// address changes, which is why the last one is held rather than recomputed.
-// a band drops the half of the address it does not name.
+// the column rolls sideways and the row vertically, so the address moves the way
+// the selection did. the direction is only knowable at the moment the address
+// changes, which is why the last one is held rather than recomputed.
 export function Odometer({ address, band }: { address: Address; band: Band }) {
   const [seen, setSeen] = useState({ address, dx: 0, dy: 0 });
   if (seen.address.row !== address.row || seen.address.col !== address.col) {

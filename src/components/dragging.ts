@@ -180,9 +180,8 @@ export function useDragging(
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>): void {
-    // the sheet goes with the hand: the point that was under the pointer when
-    // it was grabbed stays under it. the ring is left alone, since nothing is
-    // being pointed at while the paper is moving.
+    // the point that was under the pointer when it was grabbed stays under it.
+    // the ring is left alone: nothing is being pointed at while the sheet moves.
     if (drag.current === "pan") {
       const view = viewport.current!;
       view.scrollLeft = panFrom.current.x - event.clientX;
@@ -190,9 +189,8 @@ export function useDragging(
       return;
     }
 
-    // the block is over a cell or over itself, and over itself it lands nowhere:
-    // a range cannot be totalled into one of its own cells without reading what
-    // it is about to write
+    // over itself it lands nowhere: a range cannot be totalled into one of its
+    // own cells without reading what it is about to write
     if (drag.current === "quote") {
       const carrying = getQuoting()!;
       const onto = cellUnder(event);

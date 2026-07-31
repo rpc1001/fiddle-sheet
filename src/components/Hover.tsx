@@ -3,11 +3,9 @@ import { type Address, cellKey } from "../core/address";
 import { cellRect } from "../core/geometry";
 import { useHover } from "../state/hover";
 
-// the header and the gutter are a hundred and twenty six elements that change
-// for nothing else in the sheet's life. lighting the two under the pointer by
-// writing a class on them costs two lookups a cell; doing it through react would
-// rebuild a whole row and a whole column of them on every move. nothing renders
-// these nodes again, so the class has no react state to disagree with.
+// lighting the two labels under the pointer through react would rebuild a whole
+// row and column of them on every move. nothing else ever renders these nodes,
+// so writing the class directly has no react state to disagree with.
 function useLitLabels(grid: RefObject<HTMLDivElement | null>, cell: Address | null): void {
   useEffect(() => {
     const root = grid.current;

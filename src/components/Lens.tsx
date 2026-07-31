@@ -115,11 +115,9 @@ function distanceFrom(cell: Rect, box: Rect, side: Side): number {
 }
 
 // the nearest edge of the selection with room beside it, lined up with the cell
-// being worked on. one rule rather than a running order: the answer turns up
-// where the hand already is, and on a selection wider than the window a fixed
-// preference for one side puts it clean across the screen from the pointer.
-// it measures the visible part of the selection, not the whole of it: a band
-// runs past the window on one axis, so its own edges are off screen.
+// being worked on, so the answer turns up where the hand already is. it measures
+// the visible part rather than the whole: a band runs past the window on one
+// axis, so its own edges are off screen.
 function answerPlacement(range: Range, focus: Address, view: Viewport): Placement {
   const box = visiblePart(rectOf(range), view);
   const cell = cellRect(focus);

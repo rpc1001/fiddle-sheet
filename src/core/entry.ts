@@ -26,11 +26,10 @@ export function clearWrites(range: Range): [CellKey, string][] {
   return writes;
 }
 
-// the selection's first row taken down it, or its first column taken across.
-// this is the drag of the fill handle without the drag, so it asks the same
-// function what the cells mean, and it asks for the copy: a keyed fill states
-// no direction of its own, and reading "1" as the start of a run is a guess
-// that only the hand dragging it can make.
+// the selection's first row taken down it, or its first column taken across: the
+// fill handle's drag without the drag, so it asks the same function what the cells
+// mean. it asks for the copy, since reading "1" as the start of a run is a guess
+// only the hand dragging it can make.
 export function fillWrites(read: Read, range: Range, axis: "down" | "right"): [CellKey, string][] {
   // one cell selected states a target and no source, so the source is the cell
   // it is being filled from: the one above, or the one to its left. a block

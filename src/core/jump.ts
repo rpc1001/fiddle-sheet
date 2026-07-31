@@ -10,11 +10,9 @@ function inSheet(row: number, col: number): boolean {
   return row >= 0 && row < ROWS && col >= 0 && col < COLS;
 }
 
-// the far side of the run the cursor is in, one press instead of a hundred.
-// three cases, and they are the same three every spreadsheet uses: inside a
-// run, stop at its last cell; at its end, skip the gap to the next thing worth
-// stopping at; with nothing ahead, go to the edge of the sheet. the edge is a
-// real answer, not a failure: it is how you get to row 100.
+// the far side of the run the cursor is in. three cases: inside a run, stop at
+// its last cell; at its end, skip the gap to the next thing worth stopping at;
+// with nothing ahead, go to the edge of the sheet, which is how you reach row 100.
 export function jumpTarget(read: Read, from: Address, rowStep: number, colStep: number): Address {
   let { row, col } = from;
   if (!inSheet(row + rowStep, col + colStep)) return from;

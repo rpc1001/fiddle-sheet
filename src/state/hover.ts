@@ -2,8 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { Address } from "../core/address";
 import { createValueStore } from "./valueStore";
 
-// the cell under the pointer, null while it is off the sheet. outside react for
-// the same reason as the selection: it changes at pointer rate.
+// the cell under the pointer, null while it is off the sheet
 const store = createValueStore<Address | null>(null);
 
 export const getHover = store.get;

@@ -50,12 +50,9 @@ export function canTakeOperator(text: string): boolean {
   return isFormula(text) && COMPLETE_VALUE.test(text);
 }
 
-// "=SUM(B2:B7" commits as "=SUM(B2:B7)". the closing bracket carries no meaning
-// of its own here, so asking for it is a rule with nothing behind it.
-// "=SUM(C" commits as "=SUM(C:C". naming a column once names all of it, and the
-// second half of C:C repeats what has already been said: the same argument as
-// the bracket below. a letter followed by "(" is a function being called, not a
-// column, however unknown that function turns out to be.
+// "=SUM(C" commits as "=SUM(C:C": naming a column once names all of it, so the
+// second half repeats what has been said, the same argument as the bracket below.
+// a letter followed by "(" is a function being called, not a column.
 export function expandColumns(text: string): string {
   if (!isFormula(text)) return text;
 

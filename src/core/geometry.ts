@@ -146,7 +146,7 @@ export function keepDown(y: number, height: number, gap: number, view: Viewport)
 
 // the part of a rect that is on screen, and the only part a panel beside it can
 // aim at: a whole column is taller than the window and a whole row is wider, so
-// the rect's own middle and its own edges are somewhere nobody is looking
+// the rect's own edges are off screen
 export function visiblePart(rect: Rect, view: Viewport): Rect {
   const left = Math.max(rect.left, view.scrollLeft + GUTTER_WIDTH);
   const top = Math.max(rect.top, view.scrollTop + HEADER_HEIGHT);
@@ -176,10 +176,10 @@ export function cellRect(cell: Address): Rect {
 
 export type Inset = { left: number; top: number; right: number; bottom: number };
 
-// the same box as rectOf, given as the distance from each edge of the sheet
-// instead of a corner and a size. an edge that is already where it belongs can
-// then stay there while the far one travels, which a width cannot express: a
-// width is measured from the near edge, so pinning one moves the other.
+// the same box as rectOf, as the distance from each edge of the sheet rather than
+// a corner and a size, so one edge can stay put while the far one travels. a width
+// cannot express that: it is measured from the near edge, so pinning one moves the
+// other.
 export function insetOf(range: Range): Inset {
   const rect = rectOf(range);
 

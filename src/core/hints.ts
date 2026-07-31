@@ -1,10 +1,7 @@
 export type Hint = { keys: string; label: string };
 
-// what the sheet is being used for right now. the hints follow from this and
-// nothing else, which keeps them out of the components.
-// the suggestion list is in one of three states, not two: closed, open but not
-// asked for, and holding the keys. the middle one is the whole reason this is
-// not a boolean, since the arrows reach a list that enter does not.
+// closed, open but not asked for, and holding the keys. the middle state is why
+// this is not a boolean: the arrows reach a list that enter does not.
 export type List = "none" | "showing" | "taking";
 
 export type Doing =

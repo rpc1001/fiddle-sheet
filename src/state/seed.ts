@@ -12,14 +12,12 @@ function place(top: number, left: number, cells: Block): [CellKey, string][] {
   );
 }
 
-// the sheet opens unfinished on purpose. the number in A2, the formulas in E2
-// and F2 and the invoice in G2 are each the first cell of a column the fill
-// completes, and row 20 is a total with nothing in it yet.
+// the sheet opens unfinished on purpose: A2, E2, F2 and G2 each start a column
+// the fill completes, and row 20 is a total with nothing in it yet.
 //
-// D9 holds a word where the column holds numbers. it is the only cell that is
-// wrong, and it is wrong on purpose: SUM skips text inside a range, so the
-// summary stays right, while E9 and F9 read it directly and both come back
-// blaming D9. nothing sums E or F, so the two errors stay where they are.
+// D9 holds a word where the column holds numbers, and it is wrong on purpose.
+// SUM skips text inside a range, so the summary stays right, while E9 and F9
+// read it directly and both come back blaming D9.
 const TABLE: Block = [
   ["#", "Site", "Budget", "Actual", "Diff", "Share %", "Invoice"],
   [1, "Rent", 2400, 2400, "=C2-D2", "=D2/$J$3*100", "INV 1001"],

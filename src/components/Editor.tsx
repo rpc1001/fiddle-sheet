@@ -52,17 +52,13 @@ function isMonospaced(text: string): boolean {
   return isFormula(text) || isNumericText(text);
 }
 
-// the second click of a double click says the first one was not browsing: the
-// box is on its way to a cell that is about to be opened, so the rest of the
-// trip runs at this much of its own speed. the curve is unchanged, it is the
-// same move told to get on with it.
+// the second click says the first was not browsing, so the box finishes its trip
+// at this much of its own speed. the curve is unchanged.
 const HURRY = 3;
 
-// a double click sets the selection on the first press and opens the editor on
-// the second, which is well inside the box's travel. the thing that arrives has
-// to be the thing that opens, so the draft holds until the box is still and
-// takes over where it lands. the box itself is asked, not a clock: it is the one
-// that knows, and a cell already selected has nothing running to wait for.
+// a double click opens the editor well inside the selection box's travel, so the
+// draft holds until the box lands and takes over there. the box is asked rather
+// than a clock, since a cell already selected has nothing running to wait for.
 function useHurriedLanding(viewport: RefObject<HTMLDivElement | null>): boolean {
   const [held, setHeld] = useState(true);
 

@@ -3,9 +3,7 @@ import type { Axis } from "../core/geometry";
 import { createValueStore } from "./valueStore";
 
 // a band being carried: which way it travels, where its near edge has been
-// dragged to along that axis, and the gap it would land in. null whenever nothing
-// is being dragged. outside react for the same reason as hover: it changes at
-// pointer rate and only the overlay reads it.
+// dragged to along that axis, and the gap it would land in
 export type Carry = { axis: Axis; offset: number; gap: number };
 
 const store = createValueStore<Carry | null>(null);

@@ -4,9 +4,7 @@ import { draftReferences, isFormula } from "./scan";
 
 export type Suggestion =
   // the functions a name could still become. typed says whether the list is
-  // narrowing something the user has written or is the whole menu offered
-  // unprompted, which is the difference between a list they are using and a
-  // list that is merely open.
+  // narrowing something written or is the whole menu offered unprompted.
   | { kind: "functions"; matches: SheetFunction[]; typed: boolean }
   // the brackets are open, so the useful thing to say is what the argument
   // covers, or what the function wants when nothing has been typed yet

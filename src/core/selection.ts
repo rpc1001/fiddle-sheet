@@ -23,11 +23,9 @@ export function selectionOver(range: Range): Selection {
   };
 }
 
-// a band of whole columns or whole rows is an ordinary selection stretched to
-// the far edge of the sheet, which is also what A:A means to the formula engine.
-// the anchor sits at the far end and the focus at the near one: the focus is
-// where the keyboard picks up, and after selecting a column that is its first
-// cell, not the hundredth.
+// a band is an ordinary selection stretched to the far edge of the sheet, which
+// is also what A:A means to the formula engine. the anchor sits at the far end so
+// the focus lands on the band's first cell, where the keyboard picks up.
 export function columnSpan(anchorCol: number, focusCol: number): Selection {
   return { anchor: { row: ROWS - 1, col: anchorCol }, focus: { row: 0, col: focusCol } };
 }

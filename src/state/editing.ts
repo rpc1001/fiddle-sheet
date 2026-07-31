@@ -66,12 +66,10 @@ export function startEditing(cell: Address, text: string, origin: DraftOrigin = 
   });
 }
 
-// typing invalidates the insertion point: whatever is at the end is now yours.
-// it also reopens the list, since the name being typed has changed.
-//
-// the draft becomes the user's by default: a guess is only being offered until
-// they touch it. the swap list is the one caller that says otherwise, because
-// it is rewriting the very draft it is offering.
+// typing invalidates the insertion point and reopens the list, since the name
+// being typed has changed. it also makes the draft the user's: a guess is only
+// offered until they touch it, and the swap list is the one caller that says
+// otherwise, since it rewrites the very draft it is offering.
 export function setDraft(text: string, origin: DraftOrigin = "typed"): void {
   const editing = store.get();
   if (editing) {
@@ -128,12 +126,11 @@ export function useEditingCell(): Address | null {
   return useSyncExternalStore(store.subscribe, () => store.get()?.cell ?? null);
 }
 
-// what the draft is offering right now, with the highlight already wrapped to
-// the list it lands in. the editor takes keys on this, the panel draws it and
-// the status bar names it, so all three have to be reading the same answer.
-// taking is whether enter belongs to the list rather than to the cell: a list
-// narrowing a name that is being typed has been asked for, and one that opened
-// by itself after "=" has not been, until the arrows go into it.
+// what the draft is offering right now, highlight already wrapped to the list it
+// lands in. the editor takes keys on this, the panel draws it and the status bar
+// names it, so all three read one answer. taking is whether enter belongs to the
+// list: a list narrowing a typed name has been asked for, one that opened by
+// itself has not, until the arrows go into it.
 export function offered(editing: Editing): {
   suggestion: Suggestion;
   highlight: number;

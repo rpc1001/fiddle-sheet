@@ -6,8 +6,7 @@ import { useQuoting } from "../state/quoting";
 import { useSelection } from "../state/selection";
 
 // what is being carried and where it would land. the ghost tracks the pointer
-// with no easing of its own: it stands in for the hand, and a hand does not
-// settle. the line snaps between boundaries, because a boundary is a choice.
+// with no easing of its own, and the line snaps between boundaries.
 export function DropLine() {
   const carry = useMoving();
   const range = selectionRange(useSelection());
@@ -45,10 +44,9 @@ export function DropLine() {
   );
 }
 
-// the formula a carried block would write, hanging off the pointer, and the
-// cell it would be written into. the text is the whole affordance: it says
-// what is about to happen in the language the cell will hold, so the gesture
-// teaches the formula rather than just performing it.
+// the formula a carried block would write, hanging off the pointer, and the cell
+// it would be written into. the text says what is about to happen in the language
+// the cell will hold, so the gesture teaches the formula rather than performing it.
 export function QuoteGhost() {
   const quote = useQuoting();
   if (!quote) return null;

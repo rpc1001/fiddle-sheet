@@ -87,3 +87,29 @@ and a new node kind is a type error everywhere it is not handled.
 the draft on every keystroke, and a formula is unparseable at nearly every intermediate state
 (`=S`, `=SUM(`, `=SUM(A1`), so failure is the normal case rather than the exceptional one. The
 expensive part of `new Error()` is the stack capture, and nothing here reads a stack.
+
+### Formulas: evaluation
+
+`evaluate(node, readCell)` takes the cell reader as an argument, so it never knows what a sheet is.
+That is what makes the live answer under an open formula work: `sheet.preview(raw)` parses the draft
+and evaluates it against the real sheet with nothing written yet.
+
+`walk` is a switch over the six node kinds and recurses the same shape as the tree. A bare range is
+the only kind that fails on sight, since a range only means something as an argument to a function.
+
+Errors are thrown as a `Failure` to unwind out of a half finished tree, then caught once at the top
+and returned as a value. Same as `ParseError`, it does not extend `Error`.
+
+An error is `{ code, blame, detail }` instead of a string. `#VALUE!` is only how it displays.
+`blame` is the address of the cell that caused it, which is what lets the sheet point at the one
+cell of fifty worth fixing. An error read out of a cell keeps its original blame, and one that never
+named a cell takes the cell it was read from, so a formula built on a broken formula at least points
+at the broken one.
+
+Dividing by zero blames the divisor, since that is the thing to go and change. `applyOperator` takes
+the whole node instead of just the operator, because only the node still knows which cell the right
+hand side came from.
+
+Inside a range, text and empty cells are skipped instead of failing, because a range is usually a
+column with a heading on it. Errors still propagate. In plain arithmetic an empty cell reads as 0,
+the same as Sheets.

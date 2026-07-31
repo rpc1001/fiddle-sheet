@@ -64,12 +64,8 @@ function FunctionList({
 }
 
 // a formula takes every click on the grid as a reference, so there is no cell a
-// mouse can click to finish one. this is that click, and it sits on the line
-// that holds the answer because accepting the answer is what it does.
-//
-// it saves by leaving the field, which is what saving a draft already is here
-// and when the pointer lands anywhere else, rather than being a second way to
-// save that could fall out of step with the first.
+// mouse can click to finish one. this is that click. it saves by leaving the
+// field rather than being a second way to save that could fall out of step.
 function Done() {
   return (
     <button
