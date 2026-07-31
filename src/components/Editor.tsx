@@ -8,9 +8,10 @@ import {
   useState,
 } from "react";
 import { cellKey } from "../core/address";
+import { spreadWrites } from "../core/entry";
 import { SHEET_WIDTH, clampAddress, rectOf } from "../core/geometry";
 import { rangeAt } from "../core/range";
-import { selectionAt } from "../core/selection";
+import { selectionAt, selectionRange } from "../core/selection";
 import { balanceBrackets, expandColumns } from "../core/formula/scan";
 import { acceptSuggestion } from "../core/formula/suggest";
 import {
@@ -23,7 +24,7 @@ import {
   stopEditing,
   useEditing,
 } from "../state/editing";
-import { setSelection } from "../state/selection";
+import { getSelection, setSelection } from "../state/selection";
 import { sheet } from "../state/sheet";
 import { viewportBox } from "./viewport";
 
@@ -132,6 +133,20 @@ function Draft({
     onDone();
   }
 
+  // the draft into every selected cell at once. the selection is what says how
+  // far it goes, so this is only a commit with a wider target, and it lands as
+  // one edit: filling a block and taking it back should cost one press each.
+  function spread(): void {
+    if (done.current) return;
+    done.current = true;
+
+    const selection = getSelection();
+    const written = balanceBrackets(expandColumns(text));
+    sheet.edit(spreadWrites(written, cell, selectionRange(selection)), selection);
+    stopEditing();
+    onDone();
+  }
+
   function cancel(): void {
     done.current = true;
     stopEditing();
@@ -154,8 +169,11 @@ function Draft({
     } else if (taking && names && (event.key === "Enter" || event.key === "Tab")) {
       event.preventDefault();
       setDraft(acceptSuggestion(text, names[highlight]!.name));
+    } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      spread();
     } else if (event.key === "Enter") {
-      commit(1, 0);
+      commit(event.shiftKey ? -1 : 1, 0);
     } else if (event.key === "Tab") {
       event.preventDefault();
       commit(0, event.shiftKey ? -1 : 1);

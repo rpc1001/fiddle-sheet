@@ -10,6 +10,7 @@ import {
 } from "react";
 import { type Address, type CellKey, cellKey, columnLabel } from "../core/address";
 import { clipText, copyClip, parseClip, pasteWrites, pastedRange } from "../core/clipboard";
+import { fillWrites } from "../core/entry";
 import { fillExtent } from "../core/fill";
 import { acceptsReference, insertReference } from "../core/formula/insert";
 import { jumpTarget } from "../core/jump";
@@ -477,6 +478,19 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
       );
     } else if (isChord(event, "a")) {
       setSelection(columnSpan(0, COLS - 1));
+    } else if (isChord(event, "d") || isChord(event, "r")) {
+      // the fill handle's drag, keyed. the selection is both the source and how
+      // far it reaches, which is the one thing a key press can say that a drag
+      // has to be told: it is already on screen.
+      const axis = isChord(event, "d") ? "down" : "right";
+      sheet.edit(fillWrites(sheet.getRaw, selectionRange(selection), axis), selection);
+    } else if (event.key === " " && (event.ctrlKey || event.shiftKey)) {
+      // the bands the selection already spans, named by the axis rather than
+      // dragged along the header
+      const range = selectionRange(selection);
+      setSelection(
+        event.ctrlKey ? columnSpan(range.left, range.right) : rowSpan(range.top, range.bottom),
+      );
     } else if (event.key === "Tab") {
       setSelection(moved(selection, 0, event.shiftKey ? -1 : 1, false));
       revealFocus();
