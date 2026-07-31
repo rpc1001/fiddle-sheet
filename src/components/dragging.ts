@@ -25,18 +25,33 @@ import { rangeValues } from "../state/sheet";
 import { bandAt, bandPickedUp, dropBand, selectBand } from "./bands";
 import type { Surface } from "./surface";
 
-// what the pointer is in the middle of. null between drags, and the whole of
-// what a move or a release has to know: every handler below reads this first.
+// what the pointer is in the middle of, carrying whatever that gesture needs to
+// finish. null between drags, and the whole of what a move or a release has to
+// know: every handler below reads this first. each variant owns its own data, so
+// there is no state a kind can be in without the values that kind runs on.
 type Drag =
-  | "selection"
-  | "reference"
-  | "column"
-  | "row"
-  | "move"
-  | "fill"
-  | "pan"
-  | "quote"
+  | { kind: "selection" }
+  | { kind: "reference" }
+  | { kind: "column" }
+  | { kind: "row" }
+  // grab is where in the block it was picked up, so the ghost hangs off the
+  // pointer at the same place the whole way. carried says it has actually
+  // travelled: the ghost appears on the press, so its presence cannot tell a
+  // drag from a click.
+  | { kind: "move"; axis: Axis; band: number; grab: number; carried: boolean }
+  // the fill's source. the selection moves to what the fill covered when it
+  // lands, so it cannot be asked for the source afterwards.
+  | { kind: "fill"; source: Range }
+  // the point of the sheet under the pointer when it was grabbed, rather than a
+  // pointer position, so a pan is one subtraction
+  | { kind: "pan"; from: { x: number; y: number } }
+  | { kind: "quote" }
   | null;
+
+// the reference a formula is pointing at. this outlives the drag on purpose: a
+// shift click extends the last reference written, and what keeps that live is the
+// draft's own inserted span, not whether the pointer is still down.
+type Reference = { anchor: Address; focus: Address };
 
 export type Dragging = {
   onPointerDown(event: PointerEvent<HTMLDivElement>): void;
@@ -53,40 +68,30 @@ export function useDragging(
   const { cellUnder, zoneUnder, pointIn, alongAxis } = surface;
 
   const drag = useRef<Drag>(null);
-  const referenceAnchor = useRef<Address | null>(null);
-  const referenceFocus = useRef<Address | null>(null);
-  // where in the block it was picked up, so the ghost hangs off the pointer at
-  // the same place the whole way rather than jumping its near edge to it
-  const grabOffset = useRef(0);
-  // the cells a fill is coming from. the selection moves to what the fill
-  // covered when it lands, so it cannot be asked for the source afterwards.
-  const fillSource = useRef<Range | null>(null);
-  // where the sheet was grabbed, kept as the point of the sheet under the
-  // pointer rather than as a pointer position, so a pan is one subtraction
-  const panFrom = useRef({ x: 0, y: 0 });
-  const pickedBand = useRef(0);
-  const pickedAxis = useRef<Axis>("column");
-  // whether the band has actually been carried anywhere. the ghost appears on
-  // the press, so its presence cannot be what tells a drag from a click.
-  const carried = useRef(false);
+  const reference = useRef<Reference | null>(null);
 
-  // writes the clicked cell or range into an open formula. returns false when the
-  // click means something else, so the caller falls back to selecting.
-  function writeReference(cell: Address, extend: boolean): boolean {
+  // writes the clicked cell or range into an open formula. from is the anchor to
+  // extend out of, or null to start a new reference at cell. returns the
+  // reference now written, or null when the click means something else, so the
+  // caller falls back to selecting.
+  function writeReference(cell: Address, from: Address | null): Reference | null {
     const editing = getEditing();
-    if (!editing) return false;
-    if (!acceptsReference(editing.text) && !editing.inserted) return false;
+    if (!editing) return null;
+    if (!acceptsReference(editing.text) && !editing.inserted) return null;
 
-    // the anchor is only live while the last thing written was our own
-    // reference. after typing, or in a different cell, this click starts a new one.
+    // only extend while the last thing written was our own reference. after
+    // typing, or in a different cell, this click starts a new one.
     const previous = editing.inserted;
-    const anchor = extend && previous ? (referenceAnchor.current ?? cell) : cell;
-    referenceAnchor.current = anchor;
-    referenceFocus.current = cell;
+    const anchor = from && previous ? from : cell;
 
     const next = insertReference(editing.text, previous, anchor, cell);
     setInsertedDraft(next.text, next.span);
-    return true;
+    return { anchor, focus: cell };
+  }
+
+  // the anchor a shift press extends from, when there is one to extend
+  function anchorFor(extend: boolean): Address | null {
+    return extend ? (reference.current?.anchor ?? null) : null;
   }
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>): void {
@@ -98,11 +103,10 @@ export function useDragging(
       if (!view) return;
 
       event.preventDefault();
-      panFrom.current = {
-        x: event.clientX + view.scrollLeft,
-        y: event.clientY + view.scrollTop,
+      drag.current = {
+        kind: "pan",
+        from: { x: event.clientX + view.scrollLeft, y: event.clientY + view.scrollTop },
       };
-      drag.current = "pan";
       view.classList.add("is-panning");
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
@@ -120,9 +124,8 @@ export function useDragging(
     // asked about before the cell underneath it is
     if ((event.target as HTMLElement).closest(".grid-fill-handle")) {
       const source = selectionRange(getSelection());
-      fillSource.current = source;
       setFilling(source);
-      drag.current = "fill";
+      drag.current = { kind: "fill", source };
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
@@ -143,7 +146,7 @@ export function useDragging(
       if (quoted) {
         event.preventDefault();
         setQuoting({ ...pointIn(event), text: quoted, onto: null });
-        drag.current = "quote";
+        drag.current = { kind: "quote" };
         event.currentTarget.setPointerCapture(event.pointerId);
         return;
       }
@@ -154,25 +157,28 @@ export function useDragging(
     if (axis) {
       const rect = rectOf(selectionRange(getSelection()));
       const near = axis === "column" ? rect.left : rect.top;
-      grabOffset.current = alongAxis(event, axis) - near;
-      pickedBand.current = axis === "column" ? cell.col : cell.row;
-      pickedAxis.current = axis;
-      carried.current = false;
-      drag.current = "move";
+      const band = axis === "column" ? cell.col : cell.row;
+
+      drag.current = { kind: "move", axis, band, grab: alongAxis(event, axis) - near, carried: false };
       // lifted where it already sits, so the press itself shows the band come
       // off the sheet rather than nothing at all until the pointer moves
-      setMoving({ axis, offset: near, gap: pickedBand.current });
+      setMoving({ axis, offset: near, gap: band });
     } else if (zone !== "cell") {
       setSelection(bandAt(zone, cell, event.shiftKey));
-      drag.current = zone === "corner" ? null : zone === "header" ? "column" : "row";
-    } else if (writeReference(cell, event.shiftKey)) {
-      // keep the caret in the editor: the default action would move focus here
-      event.preventDefault();
-      drag.current = "reference";
+      drag.current = zone === "corner" ? null : { kind: zone === "header" ? "column" : "row" };
     } else {
-      const anchor = event.shiftKey ? getSelection().anchor : cell;
-      setSelection({ anchor, focus: cell });
-      drag.current = "selection";
+      const written = writeReference(cell, anchorFor(event.shiftKey));
+
+      if (written) {
+        reference.current = written;
+        // keep the caret in the editor: the default action would move focus here
+        event.preventDefault();
+        drag.current = { kind: "reference" };
+      } else {
+        const anchor = event.shiftKey ? getSelection().anchor : cell;
+        setSelection({ anchor, focus: cell });
+        drag.current = { kind: "selection" };
+      }
     }
 
     // capture so the drag survives the pointer leaving the grid
@@ -182,17 +188,20 @@ export function useDragging(
   function onPointerMove(event: PointerEvent<HTMLDivElement>): void {
     // the point that was under the pointer when it was grabbed stays under it.
     // the ring is left alone: nothing is being pointed at while the sheet moves.
-    if (drag.current === "pan") {
-      const view = viewport.current!;
-      view.scrollLeft = panFrom.current.x - event.clientX;
-      view.scrollTop = panFrom.current.y - event.clientY;
+    if (drag.current?.kind === "pan") {
+      const view = viewport.current;
+      if (!view) return;
+      view.scrollLeft = drag.current.from.x - event.clientX;
+      view.scrollTop = drag.current.from.y - event.clientY;
       return;
     }
 
     // over itself it lands nowhere: a range cannot be totalled into one of its
     // own cells without reading what it is about to write
-    if (drag.current === "quote") {
-      const carrying = getQuoting()!;
+    if (drag.current?.kind === "quote") {
+      const carrying = getQuoting();
+      if (!carrying) return;
+
       const onto = cellUnder(event);
       const range = selectionRange(getSelection());
       setQuoting({ ...carrying, ...pointIn(event), onto: contains(range, onto) ? null : onto });
@@ -208,8 +217,8 @@ export function useDragging(
 
     if (!drag.current) return;
 
-    if (drag.current === "fill" && fillSource.current) {
-      const extent = fillExtent(fillSource.current, cell);
+    if (drag.current.kind === "fill") {
+      const extent = fillExtent(drag.current.source, cell);
       const shown = getFilling();
       if (!shown || !sameRange(shown, extent)) setFilling(extent);
       return;
@@ -217,17 +226,16 @@ export function useDragging(
 
     // the line only appears once the pointer has picked a boundary, so a press
     // and release on a band that never moved leaves the sheet alone
-    if (drag.current === "move") {
-      const axis = pickedAxis.current;
+    if (drag.current.kind === "move") {
+      const { axis, grab } = drag.current;
       const rect = rectOf(selectionRange(getSelection()));
       const [edge, extent, end] =
         axis === "column"
           ? [GUTTER_WIDTH, rect.width, SHEET_WIDTH]
           : [HEADER_HEIGHT, rect.height, SHEET_HEIGHT];
 
-      const along = alongAxis(event, axis);
-      const offset = clampBetween(along - grabOffset.current, edge, end - extent);
-      carried.current = true;
+      const offset = clampBetween(alongAxis(event, axis) - grab, edge, end - extent);
+      drag.current = { ...drag.current, carried: true };
       // the block lands where its own near edge is nearest, so the ghost and the
       // line agree about what is being aimed at
       setMoving({ axis, offset, gap: gapAtPoint(offset, axis) });
@@ -236,17 +244,19 @@ export function useDragging(
 
     // pointermove fires many times per cell, and rewriting the same reference
     // re-parses and re-evaluates the whole draft on each one
-    if (drag.current === "reference") {
-      const last = referenceFocus.current;
-      if (!last || !sameCell(last, cell)) writeReference(cell, true);
+    if (drag.current.kind === "reference") {
+      const last = reference.current;
+      if (!last || !sameCell(last.focus, cell)) {
+        reference.current = writeReference(cell, anchorFor(true)) ?? last;
+      }
       return;
     }
 
     const selection = getSelection();
 
-    if (drag.current === "column" || drag.current === "row") {
+    if (drag.current.kind === "column" || drag.current.kind === "row") {
       const band =
-        drag.current === "column"
+        drag.current.kind === "column"
           ? columnSpan(selection.anchor.col, cell.col)
           : rowSpan(selection.anchor.row, cell.row);
       if (!sameCell(selection.focus, band.focus)) setSelection(band);
@@ -258,29 +268,28 @@ export function useDragging(
   }
 
   function endDrag(): void {
-    const carry = getMoving();
-    const reach = getFilling();
-    const quote = getQuoting();
+    const current = drag.current;
 
     // the formula arrives open rather than written: the range and the function
     // are both stated, and the one that was guessed is the one the caret is in
-    if (drag.current === "quote" && quote?.onto) {
-      startEditing(quote.onto, quote.text, "guessed");
+    if (current?.kind === "quote") {
+      const quote = getQuoting();
+      if (quote?.onto) startEditing(quote.onto, quote.text, "guessed");
     }
 
-    // a handle pressed and released without travelling reaches nothing, and
-    // applyFill has nothing to write
-    if (drag.current === "fill" && reach && fillSource.current) {
-      applyFill(fillSource.current, reach);
+    // a handle pressed and released without travelling reaches nothing
+    if (current?.kind === "fill") {
+      const reach = getFilling();
+      if (reach) applyFill(current.source, reach);
     }
 
     // a press that never moved is a click, and a click on a header or a gutter
     // selects that one band: without this a block swallows every press inside it
     // and picking a single column or row out of one becomes impossible
-    if (drag.current === "move") {
-      const band = pickedBand.current;
-      if (carried.current && carry) dropBand(carry.axis, carry.gap);
-      else selectBand(pickedAxis.current, band);
+    if (current?.kind === "move") {
+      const carry = getMoving();
+      if (current.carried && carry) dropBand(carry.axis, carry.gap);
+      else selectBand(current.axis, current.band);
     }
 
     cancelDrag();
@@ -290,7 +299,7 @@ export function useDragging(
   // following a mouse that is no longer held, and a half finished move is not a
   // move, so it drops nothing
   function cancelDrag(): void {
-    if (drag.current === "pan") viewport.current?.classList.remove("is-panning");
+    if (drag.current?.kind === "pan") viewport.current?.classList.remove("is-panning");
     drag.current = null;
     setMoving(null);
     setFilling(null);

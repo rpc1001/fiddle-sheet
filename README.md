@@ -51,8 +51,7 @@ sorted and works off one shared iteration order.
 A range is four edges instead of a corner and a size. To draw it, `insetOf` turns those four grid
 indices into pixel distances from each side of the sheet, and they go straight into CSS as
 `left/top/right/bottom`. So the browser is told where each of the four sides is, separately, which
-is what lets the box animate one edge and hold another still. A width cannot, since the far edge is
-the near edge plus the size.
+is what lets the box animate one edge and hold another still. 
 
 A whole column selection is not a mode. It is an ordinary selection stretched to the far edge of the
 sheet, which is also what `A:A` means to the engine, so nothing downstream needs a second path. The
@@ -61,55 +60,62 @@ on C1 rather than C100.
 
 ### Formulas: parsing
 
-`src/core/formula/parse.ts` is a hand written tokenizer and recursive descent parser, no dependency.
-Text goes in, a tree comes out, and the text is never read again: a `ref` node holds `row` and `col`
-numbers, not `"A1"`.
+`src/core/formula/parse.ts` is a tokenizer and recursive descent parser with no dependency.
+Text goes in, a tree comes out, the text is never read again: a `ref` node holds `row` and `col`
+numbers, not `"A1"`. I  learned this approach in my Programming Languages course at University so it was cool to  be able to apply it somewhere real for the first time. 
 
-The tokenizer chunks characters into numbers, names and punctuation, and knows nothing else. `SUM`
-and `A1` are both name tokens, because telling them apart needs the token after them.
+The tokenizer chunks chars into nums, names and punctuation. `SUM` and `A1` are both name tokens since telling them apart requires the next token after them.
 
 Precedence is the call order of three functions, `parseExpression` (`+` `-`) to `parseTerm` (`*`
-`/`) to `parseUnary`, not a table. The lower precedence level asks the higher one for each of its
+`/`) to `parseUnary`. The lower precedence level asks the higher one for each of its
 operands, so a term is always fully assembled before a sum can see it, and `A1+B1*2` nests the
-multiply inside the plus by construction. Adding an operator is a function in the chain rather than
-an entry in a table. Associativity is the loop inside each of those functions: the tree built so far
-becomes the left child of the next node, so `10-3-2` is 5 and not 9.
+multiply inside the plus by construction.Associativity is the loop inside each of those functions: the tree built so far
+becomes the left child of the next node making `10-3-2` is 5 and not 9.
 
 Ambiguity is resolved by one token of lookahead. A name followed by `(` is a call, otherwise it is a
 reference; a reference followed by `:` is a range, otherwise a single cell. Checking the `:` first
 is what makes `A:A` and `B:D` fall out of the ordinary path instead of needing a case of their own,
 since `A` alone is not an address.
 
-`Node` is a six case discriminated union, so the evaluator's switch is exhaustive at compile time
-and a new node kind is a type error everywhere it is not handled.
-
-`ParseError` deliberately does not extend `Error`. The live answer under an open formula reparses
-the draft on every keystroke, and a formula is unparseable at nearly every intermediate state
-(`=S`, `=SUM(`, `=SUM(A1`), so failure is the normal case rather than the exceptional one. The
-expensive part of `new Error()` is the stack capture, and nothing here reads a stack.
-
 ### Formulas: evaluation
 
-`evaluate(node, readCell)` takes the cell reader as an argument, so it never knows what a sheet is.
-That is what makes the live answer under an open formula work: `sheet.preview(raw)` parses the draft
-and evaluates it against the real sheet with nothing written yet.
+`evaluate(node, readCell)` takes the cell reader as an argument. `sheet.preview(raw)` parses the draft and evaluates it against the real sheet with nothing written yet.
 
-`walk` is a switch over the six node kinds and recurses the same shape as the tree. A bare range is
-the only kind that fails on sight, since a range only means something as an argument to a function.
+`walk` has one branch per node kind and calls itself on the children, so evaluation follows the shape of the tree: the leaves answer first and the answers come back up.
 
 Errors are thrown as a `Failure` to unwind out of a half finished tree, then caught once at the top
 and returned as a value. Same as `ParseError`, it does not extend `Error`.
 
 An error is `{ code, blame, detail }` instead of a string. `#VALUE!` is only how it displays.
-`blame` is the address of the cell that caused it, which is what lets the sheet point at the one
-cell of fifty worth fixing. An error read out of a cell keeps its original blame, and one that never
-named a cell takes the cell it was read from, so a formula built on a broken formula at least points
-at the broken one.
+`blame` is the address of the cell that caused it so then the sheet can point it out. 
 
-Dividing by zero blames the divisor, since that is the thing to go and change. `applyOperator` takes
-the whole node instead of just the operator, because only the node still knows which cell the right
-hand side came from.
+Inside a range, text and empty cells are skipped instead of failing since a range is usually a
+column with a heading on it. In plain arithmetic an empty cell reads as 0.
 
-Inside a range, text and empty cells are skipped instead of failing, because a range is usually a
-column with a heading on it. Errors still propagate. In plain arithmetic an empty cell reads as 0,
-the same as Sheets.
+### Dependencies
+
+Two maps in `src/core/sheet/graph.ts`, one each way. `precedents` is the cells a formula reads,
+`dependents` is the formulas that read a cell. Both keyed by the same integer as the store.
+
+The edges come from the tree, not the text. `references()` walks a parsed formula and returns every
+cell it names, and `setPrecedents` unwires the old edges before wiring the new ones. It also returns
+the edges that were not there before, which is what lets a new connection be shown being made
+instead of only its result.
+
+An edit does two passes. First it floods `dependents` outward from the cells that changed to get the
+affected set. Then it runs Kahn's algorithm over that set alone, which orders it so every cell comes
+after everything it reads. Each cell recomputes exactly once and never on a stale input. The cost is
+the size of the affected set.
+
+
+Writing and recomputing are separate. An edit stores all its cells and rewires the graph first,
+then runs one pass over everything downstream. Pasting A1 and A2 when C1 reads both means C1
+recomputes once, after both, instead of twice with a stale value in between.
+
+Cycles need no separate detection. Kahn's only releases a cell once everything it waits on has run,
+so anything still waiting when the queue drains is waiting on itself, directly or through a chain.
+Those come back as `circular` and get `#CYCLE!`.
+
+`trace` reads the same two maps breadth first, three hops each way, which is what the overlay draws
+when you select a cell. It stops at three because past that the tint is too faint to read and the
+sheet is just busy.
