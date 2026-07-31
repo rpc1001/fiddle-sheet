@@ -17,5 +17,4 @@ pnpm-debug.log*
 *.sw?
 .Rhistory
 
-CLAUDE.md
 design/
