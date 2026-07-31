@@ -84,8 +84,44 @@ describe("evaluate", () => {
     expect(run("A1/0", { A1: 10 })).toMatchObject({ code: "divide-by-zero" });
   });
 
-  it("reports dividing by an empty cell", () => {
-    expect(run("A1/B1", { A1: 10 })).toMatchObject({ code: "divide-by-zero" });
+  it("blames the divisor cell when it holds the zero", () => {
+    expect(run("A1/B1", { A1: 10, B1: 0 })).toMatchObject({
+      code: "divide-by-zero",
+      blame: { row: 0, col: 1 },
+    });
+  });
+
+  it("reports dividing by an empty cell, and blames it", () => {
+    expect(run("A1/B1", { A1: 10 })).toMatchObject({
+      code: "divide-by-zero",
+      blame: { row: 0, col: 1 },
+    });
+  });
+
+  // a literal zero is written in this cell, so there is nowhere else to point
+  it("blames nothing when the divisor is not a cell", () => {
+    expect(run("A1/0", { A1: 10 })).toMatchObject({ blame: null });
+  });
+
+  it("blames the cell an error was read from when the error names none", () => {
+    const broken = { code: "unknown-function", blame: null, detail: "TOTAL" } as const;
+    expect(run("A1+1", { A1: broken })).toMatchObject({
+      code: "unknown-function",
+      blame: { row: 0, col: 0 },
+    });
+  });
+
+  it("keeps the original blame when an error passes through a formula", () => {
+    const broken = { code: "not-a-number", blame: { row: 9, col: 3 }, detail: "pending" } as const;
+    expect(run("A1+1", { A1: broken })).toMatchObject({ blame: { row: 9, col: 3 } });
+  });
+
+  it("blames the cell inside a range that carried the error", () => {
+    const broken = { code: "divide-by-zero", blame: null, detail: "dividing by zero" } as const;
+    expect(run("SUM(A1:A3)", { A2: broken })).toMatchObject({
+      code: "divide-by-zero",
+      blame: { row: 1, col: 0 },
+    });
   });
 
   it("reports an unknown function", () => {

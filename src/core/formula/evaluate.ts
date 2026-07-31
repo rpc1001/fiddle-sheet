@@ -3,6 +3,8 @@ import { type CellError, type CellValue, type ErrorCode, isError } from "./error
 import { cellsIn } from "../range";
 import type { Node } from "./parse";
 
+type Binary = Extract<Node, { kind: "binary" }>;
+
 export type ReadCell = (row: number, col: number) => CellValue;
 
 // thrown to unwind out of a half-finished tree. deliberately not an Error:
@@ -13,6 +15,20 @@ class Failure {
 
 function fail(code: ErrorCode, detail: string, blame: Address | null = null): never {
   throw new Failure({ code, blame, detail });
+}
+
+// an error read out of a cell passes through with its original blame intact. one
+// that never named a cell takes the cell it was read from: a formula reading a
+// broken formula can at least point at the broken one, which is nearer to the
+// fix than pointing at nothing.
+function passed(error: CellError, from: Address): never {
+  throw new Failure(error.blame ? error : { ...error, blame: from });
+}
+
+// the cell a value came from, when it came from a cell at all rather than from
+// working. only a reference has an address to point at.
+function refAddress(node: Node): Address | null {
+  return node.kind === "ref" ? { row: node.row, col: node.col } : null;
 }
 
 export function evaluate(node: Node, readCell: ReadCell): number | CellError {
@@ -36,7 +52,7 @@ function walk(node: Node, readCell: ReadCell): number {
       return -walk(node.operand, readCell);
 
     case "binary":
-      return applyOperator(node.op, walk(node.left, readCell), walk(node.right, readCell));
+      return applyOperator(node, walk(node.left, readCell), walk(node.right, readCell));
 
     case "call":
       return applyFunction(node.name, node.args, readCell);
@@ -50,8 +66,7 @@ function walk(node: Node, readCell: ReadCell): number {
 function refValue(row: number, col: number, readCell: ReadCell): number {
   const value = readCell(row, col);
 
-  // an error passes through with its original blame intact
-  if (isError(value)) throw new Failure(value);
+  if (isError(value)) passed(value, { row, col });
 
   // an empty cell counts as zero in arithmetic, the same as Sheets
   if (typeof value === "string") {
@@ -62,8 +77,10 @@ function refValue(row: number, col: number, readCell: ReadCell): number {
   return value;
 }
 
-function applyOperator(op: "+" | "-" | "*" | "/", left: number, right: number): number {
-  switch (op) {
+// the whole node rather than its operator, because a division that fails has to
+// name the operand it failed on and only the node still knows what that was
+function applyOperator(node: Binary, left: number, right: number): number {
+  switch (node.op) {
     case "+":
       return left + right;
     case "-":
@@ -71,7 +88,8 @@ function applyOperator(op: "+" | "-" | "*" | "/", left: number, right: number): 
     case "*":
       return left * right;
     case "/":
-      if (right === 0) fail("divide-by-zero", "dividing by zero");
+      // the divisor is the thing to go and change, when it is a cell at all
+      if (right === 0) fail("divide-by-zero", "dividing by zero", refAddress(node.right));
       return left / right;
   }
 }
@@ -85,7 +103,7 @@ function collectNumbers(args: Node[], readCell: ReadCell): number[] {
     if (arg.kind === "range") {
       for (const address of cellsIn(arg.range)) {
         const value = readCell(address.row, address.col);
-        if (isError(value)) throw new Failure(value);
+        if (isError(value)) passed(value, address);
         if (typeof value === "number") numbers.push(value);
       }
     } else {
