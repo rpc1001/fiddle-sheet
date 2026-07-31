@@ -1,37 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type CellKey, cellKey, parseAddress } from "./address";
 import { clearWrites, fillWrites, spreadWrites } from "./entry";
-import type { Range } from "./range";
-
-function sheetOf(cells: Record<string, string>) {
-  const byKey = new Map<CellKey, string>();
-  for (const [address, text] of Object.entries(cells)) {
-    const at = parseAddress(address)!;
-    byKey.set(cellKey(at.row, at.col), text);
-  }
-  return (key: CellKey) => byKey.get(key) ?? "";
-}
-
-function written(writes: [CellKey, string][]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, text] of writes) {
-    const row = Math.floor(key / 26);
-    const col = key % 26;
-    out[`${String.fromCharCode(65 + col)}${row + 1}`] = text;
-  }
-  return out;
-}
-
-function rangeOf(text: string): Range {
-  const [from, to] = text.split(":");
-  const one = parseAddress(from!)!;
-  const two = parseAddress(to ?? from!)!;
-  return { top: one.row, left: one.col, bottom: two.row, right: two.col };
-}
+import { addressAt, rangeOf, sheetOf, written } from "./testSheet";
 
 describe("spreadWrites", () => {
   it("writes the draft to every cell of the block", () => {
-    expect(written(spreadWrites("x", parseAddress("A1")!, rangeOf("A1:B2")))).toEqual({
+    expect(written(spreadWrites("x", addressAt("A1"), rangeOf("A1:B2")))).toEqual({
       A1: "x",
       B1: "x",
       A2: "x",
@@ -40,7 +13,7 @@ describe("spreadWrites", () => {
   });
 
   it("carries a formula to each cell the way a fill would", () => {
-    expect(written(spreadWrites("=B1*2", parseAddress("A1")!, rangeOf("A1:A3")))).toEqual({
+    expect(written(spreadWrites("=B1*2", addressAt("A1"), rangeOf("A1:A3")))).toEqual({
       A1: "=B1*2",
       A2: "=B2*2",
       A3: "=B3*2",
@@ -48,7 +21,7 @@ describe("spreadWrites", () => {
   });
 
   it("leaves a pinned reference alone", () => {
-    expect(written(spreadWrites("=$B$1", parseAddress("A1")!, rangeOf("A1:A2")))).toEqual({
+    expect(written(spreadWrites("=$B$1", addressAt("A1"), rangeOf("A1:A2")))).toEqual({
       A1: "=$B$1",
       A2: "=$B$1",
     });

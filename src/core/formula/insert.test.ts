@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { addressAt as at } from "../testSheet";
 import { acceptsReference, insertReference } from "./insert";
-
-const at = (label: string) => ({
-  row: Number(label.slice(1)) - 1,
-  col: label.charCodeAt(0) - "A".charCodeAt(0),
-});
 
 describe("acceptsReference", () => {
   it.each(["=", "=A1+", "=A1 + ", "=SUM(", "=SUM(A1,", "=A1*", "=A1:"])(

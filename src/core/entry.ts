@@ -1,6 +1,6 @@
 import { type Address, type CellKey, cellKey } from "./address";
 import { fillReadings } from "./fill";
-import { offsetFormula } from "./formula/offset";
+import { offsetFormula } from "./formula/rewrite";
 import { type Range, cellsIn, isSingleCell } from "./range";
 import type { Read } from "./sheet/store";
 

@@ -1,5 +1,5 @@
 import { type Address, type CellKey, cellKey } from "./address";
-import { offsetFormula } from "./formula/offset";
+import { offsetFormula } from "./formula/rewrite";
 import { isFormula } from "./formula/scan";
 import { isNumericText } from "./literal";
 import type { Range } from "./range";

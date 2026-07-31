@@ -1,6 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { COLS, ROWS } from "../geometry";
-import { remapColumns, remapRows } from "./remap";
+import { type Side, offsetFormula, remapColumns, remapRows, rewriteReferences } from "./rewrite";
+
+// what all three of the rewrites below share: finding the references and leaving
+// everything else alone. tested once here rather than once per caller.
+describe("rewriteReferences", () => {
+  const across = (text: string) =>
+    rewriteReferences(text, (side: Side) => ({ ...side, col: side.col + 1 }));
+
+  it("leaves text that is not a formula alone, even when it looks like a reference", () => {
+    expect(across("A1")).toBe("A1");
+    expect(across("see B2 for the total")).toBe("see B2 for the total");
+  });
+
+  it("returns a formula with no references unchanged", () => {
+    expect(across("=2*3")).toBe("=2*3");
+  });
+
+  it("does not mistake a function name for a column", () => {
+    expect(across("=SUM(A1)")).toBe("=SUM(B1)");
+  });
+});
 
 // A and B swap, everything else stays
 const swapped = Array.from({ length: COLS }, (_, col) => {
@@ -10,11 +30,6 @@ const swapped = Array.from({ length: COLS }, (_, col) => {
 });
 
 describe("remapColumns", () => {
-  it("leaves plain text alone, even when it looks like a reference", () => {
-    expect(remapColumns("A1", swapped)).toBe("A1");
-    expect(remapColumns("see B2 for the total", swapped)).toBe("see B2 for the total");
-  });
-
   it("moves a cell reference to its column's new letter", () => {
     expect(remapColumns("=A1+C1", swapped)).toBe("=B1+C1");
   });
@@ -50,10 +65,6 @@ describe("remapColumns", () => {
   it("rewrites every reference in a long formula", () => {
     expect(remapColumns("=A1+SUM(A2:A9)*B1", swapped)).toBe("=B1+SUM(B2:B9)*A1");
   });
-
-  it("returns a formula with no references unchanged", () => {
-    expect(remapColumns("=2*3", swapped)).toBe("=2*3");
-  });
 });
 
 // rows 1 and 2 swap, everything else stays
@@ -64,11 +75,6 @@ const swappedRows = Array.from({ length: ROWS }, (_, row) => {
 });
 
 describe("remapRows", () => {
-  it("leaves plain text alone", () => {
-    expect(remapRows("A1", swappedRows)).toBe("A1");
-    expect(remapRows("see A2 for the total", swappedRows)).toBe("see A2 for the total");
-  });
-
   it("moves a cell reference to its row's new number", () => {
     expect(remapRows("=A1+A3", swappedRows)).toBe("=A2+A3");
   });
@@ -89,14 +95,50 @@ describe("remapRows", () => {
     expect(remapRows("=AVERAGE(C1:C4)", swappedRows)).toBe("=AVERAGE(C2:C4)");
   });
 
-  it("returns a formula with no references unchanged", () => {
-    expect(remapRows("=2*3", swappedRows)).toBe("=2*3");
-  });
-
   // a pin says what a fill may not move, and a band move is not a fill: the
   // reference still has to follow its row, and still has to stay pinned after
   it("keeps a pin while moving what it names", () => {
     expect(remapRows("=$A$1", swappedRows)).toBe("=$A$2");
     expect(remapColumns("=$A$1", swapped)).toBe("=$B$1");
+  });
+});
+
+describe("offsetFormula", () => {
+  it("carries a reference the same distance as the formula", () => {
+    expect(offsetFormula("=A1*2", 1, 0)).toBe("=A2*2");
+    expect(offsetFormula("=A1*2", 0, 1)).toBe("=B1*2");
+    expect(offsetFormula("=A1+B1", 3, 1)).toBe("=B4+C4");
+  });
+
+  it("moves both ends of a range", () => {
+    expect(offsetFormula("=SUM(A1:A5)", 1, 0)).toBe("=SUM(A2:A6)");
+  });
+
+  it("leaves function names alone", () => {
+    expect(offsetFormula("=AVERAGE(A1:A4)", 0, 1)).toBe("=AVERAGE(B1:B4)");
+  });
+
+  it("holds a pinned side still", () => {
+    expect(offsetFormula("=A1*$B$1", 1, 0)).toBe("=A2*$B$1");
+    expect(offsetFormula("=A1*$B$1", 0, 1)).toBe("=B1*$B$1");
+  });
+
+  it("pins one axis at a time", () => {
+    expect(offsetFormula("=$A1", 1, 1)).toBe("=$A2");
+    expect(offsetFormula("=A$1", 1, 1)).toBe("=B$1");
+  });
+
+  it("moves a whole column reference across but not down", () => {
+    expect(offsetFormula("=SUM(A:A)", 5, 1)).toBe("=SUM(B:B)");
+    expect(offsetFormula("=SUM($A:$A)", 5, 1)).toBe("=SUM($A:$A)");
+  });
+
+  it("breaks a reference that would leave the sheet rather than aiming it elsewhere", () => {
+    expect(offsetFormula("=A1*2", -1, 0)).toBe("=#REF*2");
+    expect(offsetFormula("=A1*2", 0, -1)).toBe("=#REF*2");
+  });
+
+  it("does nothing at all when the formula has not moved", () => {
+    expect(offsetFormula("=A1*$B$1", 0, 0)).toBe("=A1*$B$1");
   });
 });

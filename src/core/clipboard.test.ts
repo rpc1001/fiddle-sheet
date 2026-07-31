@@ -1,34 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { type CellKey, cellKey, parseAddress } from "./address";
 import { type Clip, clipText, copyClip, parseClip, pasteWrites, pastedRange } from "./clipboard";
 import { ROWS } from "./geometry";
-import type { Range } from "./range";
-
-function sheetOf(cells: Record<string, string>) {
-  const byKey = new Map<CellKey, string>();
-  for (const [address, text] of Object.entries(cells)) {
-    const at = parseAddress(address)!;
-    byKey.set(cellKey(at.row, at.col), text);
-  }
-  return (key: CellKey) => byKey.get(key) ?? "";
-}
-
-function written(writes: [CellKey, string][]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, text] of writes) {
-    const row = Math.floor(key / 26);
-    const col = key % 26;
-    out[`${String.fromCharCode(65 + col)}${row + 1}`] = text;
-  }
-  return out;
-}
-
-function rangeOf(text: string): Range {
-  const [from, to] = text.split(":");
-  const one = parseAddress(from!)!;
-  const two = parseAddress(to ?? from!)!;
-  return { top: one.row, left: one.col, bottom: two.row, right: two.col };
-}
+import { rangeOf, sheetOf, written } from "./testSheet";
 
 function clipOf(cells: Record<string, string>, origin: string, cut = false): Clip {
   return copyClip(sheetOf(cells), rangeOf(origin), cut);

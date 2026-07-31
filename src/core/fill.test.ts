@@ -1,27 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { type CellKey, cellKey } from "./address";
 import { fillDirection, fillExtent, fillReadings } from "./fill";
 import type { Range } from "./range";
-
-function sheetOf(cells: Record<string, string>) {
-  const byKey = new Map<CellKey, string>();
-  for (const [address, text] of Object.entries(cells)) {
-    const col = address.charCodeAt(0) - 65;
-    byKey.set(cellKey(Number(address.slice(1)) - 1, col), text);
-  }
-  return (key: CellKey) => byKey.get(key) ?? "";
-}
-
-// the written cells as { A3: "3" }, which is how the sheet reads back
-function written(writes: [CellKey, string][]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, text] of writes) {
-    const row = Math.floor(key / 26);
-    const col = key % 26;
-    out[`${String.fromCharCode(65 + col)}${row + 1}`] = text;
-  }
-  return out;
-}
+import { sheetOf, written } from "./testSheet";
 
 const A1: Range = { top: 0, left: 0, bottom: 0, right: 0 };
 const A1_A2: Range = { top: 0, left: 0, bottom: 1, right: 0 };

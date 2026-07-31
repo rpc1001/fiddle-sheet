@@ -1,13 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { type CellKey, cellKey, parseAddress } from "../address";
+import type { CellKey } from "../address";
 import { selectionAt } from "../selection";
+import { addressAt, at } from "../testSheet";
 import { createSheet } from "./store";
-
-function at(address: string): CellKey {
-  const parsed = parseAddress(address);
-  if (!parsed) throw new Error(`bad test address: ${address}`);
-  return cellKey(parsed.row, parsed.col);
-}
 
 function sheetOf(cells: Record<string, string> = {}) {
   const sheet = createSheet(Object.entries(cells).map(([address, raw]) => [at(address), raw]));
@@ -15,8 +10,7 @@ function sheetOf(cells: Record<string, string> = {}) {
     sheet,
     display: (address: string) => sheet.getDisplay(at(address)),
     set(address: string, raw: string) {
-      const parsed = parseAddress(address)!;
-      sheet.edit([[at(address), raw]], selectionAt(parsed), "type");
+      sheet.edit([[at(address), raw]], selectionAt(addressAt(address)), "type");
     },
   };
 }

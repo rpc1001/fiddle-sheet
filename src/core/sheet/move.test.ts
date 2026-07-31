@@ -1,18 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { type CellKey, cellKey } from "../address";
 import { COLS, ROWS } from "../geometry";
+import { sheetOf } from "../testSheet";
 import { moveColumns, moveRows, orderAfterMove } from "./move";
 
 const first = (order: number[], count: number) => order.slice(0, count);
-
-function reader(cells: Record<string, string>): (key: CellKey) => string {
-  const byKey = new Map<CellKey, string>();
-  for (const [address, text] of Object.entries(cells)) {
-    const col = address.charCodeAt(0) - "A".charCodeAt(0);
-    byKey.set(cellKey(Number(address.slice(1)) - 1, col), text);
-  }
-  return (key) => byKey.get(key) ?? "";
-}
 
 const at = (writes: [CellKey, string][], row: number, col: number) =>
   writes.find(([key]) => key === cellKey(row, col))?.[1];
@@ -50,7 +42,7 @@ describe("orderAfterMove", () => {
 
 describe("moveColumns", () => {
   it("carries a column's text with it", () => {
-    const read = reader({ A1: "left", B1: "middle", C1: "right" });
+    const read = sheetOf({ A1: "left", B1: "middle", C1: "right" });
     const { writes } = moveColumns(read, 0, 0, 3);
 
     expect(at(writes, 0, 0)).toBe("middle");
@@ -59,18 +51,18 @@ describe("moveColumns", () => {
   });
 
   it("reports where the block landed", () => {
-    const read = reader({});
+    const read = sheetOf({});
     expect(moveColumns(read, 0, 1, 4).start).toBe(2);
     expect(moveColumns(read, 4, 4, 0).start).toBe(0);
   });
 
   it("writes nothing when the move is a no-op", () => {
-    const read = reader({ A1: "left", B1: "middle" });
+    const read = sheetOf({ A1: "left", B1: "middle" });
     expect(moveColumns(read, 0, 0, 0).writes).toEqual([]);
   });
 
   it("repoints a formula that travelled with the move", () => {
-    const read = reader({ A1: "2", B1: "3", C1: "=A1+B1" });
+    const read = sheetOf({ A1: "2", B1: "3", C1: "=A1+B1" });
     const { writes } = moveColumns(read, 2, 2, 0);
 
     expect(at(writes, 0, 0)).toBe("=B1+C1");
@@ -79,14 +71,14 @@ describe("moveColumns", () => {
   });
 
   it("repoints a formula that stayed still but read a column that moved", () => {
-    const read = reader({ A1: "2", B1: "3", Z1: "=SUM(A1:A1)+B1" });
+    const read = sheetOf({ A1: "2", B1: "3", Z1: "=SUM(A1:A1)+B1" });
     const { writes } = moveColumns(read, 0, 0, 2);
 
     expect(at(writes, 0, 25)).toBe("=SUM(B1:B1)+A1");
   });
 
   it("leaves text that reads like a reference alone", () => {
-    const read = reader({ A1: "A1", B1: "b" });
+    const read = sheetOf({ A1: "A1", B1: "b" });
     const { writes } = moveColumns(read, 0, 0, 2);
 
     expect(at(writes, 0, 1)).toBe("A1");
@@ -95,7 +87,7 @@ describe("moveColumns", () => {
 
 describe("moveRows", () => {
   it("carries a row's text with it", () => {
-    const read = reader({ A1: "top", A2: "middle", A3: "bottom" });
+    const read = sheetOf({ A1: "top", A2: "middle", A3: "bottom" });
     const { writes } = moveRows(read, 0, 0, 3);
 
     expect(at(writes, 0, 0)).toBe("middle");
@@ -104,7 +96,7 @@ describe("moveRows", () => {
   });
 
   it("takes the whole row across every column", () => {
-    const read = reader({ A1: "one", Z1: "twenty six", A2: "next" });
+    const read = sheetOf({ A1: "one", Z1: "twenty six", A2: "next" });
     const { writes } = moveRows(read, 0, 0, 2);
 
     expect(at(writes, 1, 0)).toBe("one");
@@ -113,25 +105,25 @@ describe("moveRows", () => {
   });
 
   it("reports where the block landed", () => {
-    const read = reader({});
+    const read = sheetOf({});
     expect(moveRows(read, 0, 1, 4).start).toBe(2);
     expect(moveRows(read, 4, 4, 0).start).toBe(0);
   });
 
   it("writes nothing when the move is a no-op", () => {
-    const read = reader({ A1: "top", A2: "next" });
+    const read = sheetOf({ A1: "top", A2: "next" });
     expect(moveRows(read, 0, 0, 0).writes).toEqual([]);
   });
 
   it("repoints a formula that stayed still but read a row that moved", () => {
-    const read = reader({ A1: "2", A2: "3", A5: "=A1+A2" });
+    const read = sheetOf({ A1: "2", A2: "3", A5: "=A1+A2" });
     const { writes } = moveRows(read, 0, 0, 2);
 
     expect(at(writes, 4, 0)).toBe("=A2+A1");
   });
 
   it("leaves a whole column reference alone, since it names no row", () => {
-    const read = reader({ B1: "=SUM(A:A)" });
+    const read = sheetOf({ B1: "=SUM(A:A)" });
     const { writes } = moveRows(read, 0, 0, ROWS);
 
     expect(at(writes, ROWS - 1, 1)).toBe("=SUM(A:A)");

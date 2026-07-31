@@ -1,15 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type CellKey, cellKey, parseAddress } from "../address";
+import { type CellKey, cellKey } from "../address";
+import { at } from "../testSheet";
 import type { CellValue } from "./errors";
 import { type ReadCell, evaluate } from "./evaluate";
 import { FUNCTIONS } from "./functions";
 import { parse } from "./parse";
-
-function at(address: string): CellKey {
-  const parsed = parseAddress(address);
-  if (!parsed) throw new Error(`bad test address: ${address}`);
-  return cellKey(parsed.row, parsed.col);
-}
 
 // a fake sheet holding the values the real store would hand the evaluator, so
 // numbers are written as numbers: { A1: 10, B2: "Rent" }

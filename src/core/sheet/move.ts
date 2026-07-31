@@ -1,5 +1,5 @@
 import { type CellKey, cellKey } from "../address";
-import { remapColumns, remapRows } from "../formula/remap";
+import { remapColumns, remapRows } from "../formula/rewrite";
 import { COLS, ROWS } from "../geometry";
 import type { Read } from "./store";
 

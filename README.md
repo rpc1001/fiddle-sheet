@@ -1,7 +1,5 @@
 # fiddle-sheet
 
-A browser spreadsheet surface. 100 rows by 26 columns, one sheet, no backend.
-
 <video src="demo.mp4" controls width="100%"></video>
 
 [demo.mp4](demo.mp4)
@@ -23,24 +21,18 @@ npm test
 
 ### Grid state
 
-The sheet is a sparse `Map<CellKey, Cell>` in `src/core/sheet/store.ts`. `CellKey` is a single
-integer, `row * COLS + col`, so the store and the dependency graph key plain maps with no string
-allocation and no parsing in the hot path. An empty cell is an absent key, not a stored blank, so a
-fresh sheet holds nothing and clearing a range shrinks the map.
+The sheet is a `Map<CellKey, Cell>` in `src/core/sheet/store.ts`. `CellKey` is a single simple
+integer, `row * COLS + col.` An empty cell is an absent key instead of a a stored blank so
+fresh sheet actually hold nothing and clearing a range shrinks the map. 
 
-A cell is `{ raw, formula, value }`: the text you typed, the parsed syntax tree (null for a
-literal), and the result. The tree is built once when the text is written, not on each
-recalculation, so a cell deep in a chain that recomputes five hundred times parses once. Keeping the
+A cell is `{ raw, formula, value }`. Text you typed, the parsed syntax tree (null for a
+literal), and the result. The tree is built once when the text is written instead of on each
+recalculation. A cell deep in a chain that recomputes multiple times only is parsed once. Keeping the
 tree around is also what lets anything describe a formula rather than run it, which is where the
 lens gets `=B2*C2` reads as `12 x 4`.
 
-There is one way to write: `sheet.edit(writes, selection, action)`. Typing a cell, pasting a block,
-clearing a range, filling a column and moving a band are all one call. One call is one undoable
-action however many cells it touches, so undo grouping cannot be wrong: it is not a decision made
-after the fact. The selection travels with the write so undo can put you back where the edit
-happened, and the action name travels with it because a paste, a fill and a clear leave identical
-`{ key, before, after }` records behind. The moment it happens is the only moment you can know which
-it was, which is what lets the title bar say "undo fill C2:C18".
+There is one way to write: `sheet.edit(writes, selection, action)`. Typing, pasting,
+clearing , filling, moving a row/col are all one call. This makes undo always accurate since its just one call and group.
 
 A change is symmetric, so undo and redo are the same code path with one argument different:
 `apply(changes, "before")` and `apply(changes, "after")`. `revise()` rolls the last action back and
@@ -49,31 +41,23 @@ other leaves one entry in history rather than a guess plus a correction.
 
 ### Selection
 
-Selection is two points, `{ anchor, focus }`, not a rectangle. The anchor is where it started and
-stays put, the focus is the end that moves. A rectangle has forgotten which corner you began from,
-so it cannot answer shift-down: pushing the bottom edge and dragging the top edge are both "extend"
-and only one is right. The same fact decides what escape collapses to. It keeps the focus, because
-the focus is where the next arrow starts from.
+Selection is two points, `{ anchor, focus }` instead of a rectangle. The anchor is where it started and
+stays put, the focus is the end that moves. I chose this method because rectangles cant keep track of which corner you begin from, so it can't answer shifting-down: pushing the bottom edge and dragging the top edge are both "extend"
+and only one is right. 
 
-The rectangle is derived on demand. `Range` is `{ top, left, bottom, right }`, grid indices, both
-ends inclusive, direction thrown away: dragging B2 to D5 and D5 to B2 produce the same range.
-`rangeBetween` is the only place in the codebase that has to sort corners, so everything downstream
-(clear, copy, fill, the lens summary, hit testing, the label) receives a range that is already
+The rectangle is derived on demand. `Range` is `{ top, left, bottom, right }`, grid indices so dragging B2 to D5 and D5 to B2 produce the same range. `rangeBetween` is the only place in the codebase that has to sort corners, so everything downstream (clear, copy, fill, the lens summary, hit testing, the label) receives a range that is already
 sorted and works off one shared iteration order.
 
-`Range` is four edges rather than a corner and a size because each edge can then be controlled on
-its own. `insetOf` gives the distance from each edge of the sheet, which goes straight into CSS as
-`left/top/right/bottom`. When a selection becomes a band of whole columns, the matching lid is
-already up in the header, so the box's top edge has to arrive there at once while the other three
-still travel: one line, `transition-property: left, right, bottom`. A width cannot express that,
-since the far edge is the near edge plus the size, so pinning one moves the other. The header lid
-also positions itself from the same two numbers as the box, so the two halves of a band cannot drift
-apart.
+A range is four edges instead of a corner and a size. To draw it, `insetOf` turns those four grid
+indices into pixel distances from each side of the sheet, and they go straight into CSS as
+`left/top/right/bottom`. So the browser is told where each of the four sides is, separately, which
+is what lets the box animate one edge and hold another still. A width cannot, since the far edge is
+the near edge plus the size.
 
 A whole column selection is not a mode. It is an ordinary selection stretched to the far edge of the
 sheet, which is also what `A:A` means to the engine, so nothing downstream needs a second path. The
-anchor sits at the far end and the focus at the near one, so after clicking header C the keyboard
-picks up at C1 rather than C100.
+anchor sits at the far end and the focus at the near one, so clicking header C leaves the keyboard
+on C1 rather than C100.
 
 ### Formulas: parsing
 

@@ -1,5 +1,5 @@
 import { type Address, type CellKey, cellKey } from "./address";
-import { offsetFormula } from "./formula/offset";
+import { offsetFormula } from "./formula/rewrite";
 import { COLS, ROWS, clampBetween } from "./geometry";
 import { type Range, cellsIn } from "./range";
 import type { Read } from "./sheet/store";

@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { type CellKey, addressLabel, cellKey, parseAddress } from "./address";
+import { type CellKey, addressLabel } from "./address";
 import { jumpTarget } from "./jump";
-
-function sheetOf(cells: Record<string, string>) {
-  const byKey = new Map<CellKey, string>();
-  for (const [address, text] of Object.entries(cells)) {
-    const at = parseAddress(address)!;
-    byKey.set(cellKey(at.row, at.col), text);
-  }
-  return (key: CellKey) => byKey.get(key) ?? "";
-}
+import { addressAt, sheetOf } from "./testSheet";
 
 const column = sheetOf({ A1: "1", A2: "2", A3: "3", A7: "7", A8: "8" });
 
@@ -19,7 +11,7 @@ function jump(
   rowStep: number,
   colStep: number,
 ): string {
-  return addressLabel(jumpTarget(read, parseAddress(from)!, rowStep, colStep));
+  return addressLabel(jumpTarget(read, addressAt(from), rowStep, colStep));
 }
 
 describe("jumpTarget", () => {
