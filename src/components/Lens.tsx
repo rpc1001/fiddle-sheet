@@ -13,10 +13,12 @@ import {
   keepAcross,
   keepDown,
   type Rect,
+  cellRect,
   rectOf,
   visiblePart,
 } from "../core/geometry";
-import { type Range, isSingleCell, rangeAt, rangeLabel } from "../core/range";
+import { isFormula } from "../core/formula/scan";
+import { type Range, isSingleCell, rangeLabel } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { useEditing } from "../state/editing";
 import { type Offer, chooseReading, useOffer } from "../state/filling";
@@ -85,8 +87,7 @@ function cellView(row: number, col: number): View | null {
 
 // under the cell while it is open, because suggestions belong next to the caret
 // and the editor takes the room to the right as the formula grows
-function draftPlacement(range: Range, view: Viewport): CSSProperties {
-  const box = rectOf(range);
+function draftPlacement(box: Rect, view: Viewport): CSSProperties {
   const above = !fitsBelow(box, DRAFT_HEIGHT, GAP, view);
 
   return {
@@ -121,7 +122,7 @@ function distanceFrom(cell: Rect, box: Rect, side: Side): number {
 // runs past the window on one axis, so its own edges are off screen.
 function answerPlacement(range: Range, focus: Address, view: Viewport): Placement {
   const box = visiblePart(rectOf(range), view);
-  const cell = rectOf(rangeAt(focus));
+  const cell = cellRect(focus);
   const panel = { "--lens-w": `${WIDTH}px` } as CSSProperties;
 
   const room: Record<Side, boolean> = {
@@ -237,12 +238,12 @@ export function Lens({ viewport }: { viewport: RefObject<HTMLDivElement | null> 
 
   if (editing) {
     // a plain value has nothing to suggest and its own cell already shows it
-    if (!editing.text.startsWith("=")) return null;
+    if (!isFormula(editing.text)) return null;
 
     // the cell being edited, not the selection: enter on a multi-cell selection
     // opens the focus corner, and the panel belongs under that input
     return (
-      <div className="lens" style={draftPlacement(rangeAt(editing.cell), box)}>
+      <div className="lens" style={draftPlacement(cellRect(editing.cell), box)}>
         <DraftPanel />
       </div>
     );

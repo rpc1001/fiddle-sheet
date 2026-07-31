@@ -1,7 +1,6 @@
 import { type RefObject, useEffect } from "react";
 import { type Address, cellKey } from "../core/address";
-import { rectOf } from "../core/geometry";
-import { rangeAt } from "../core/range";
+import { cellRect } from "../core/geometry";
 import { useHover } from "../state/hover";
 
 // the header and the gutter are a hundred and twenty six elements that change
@@ -33,7 +32,7 @@ export function HoverRing({ grid }: { grid: RefObject<HTMLDivElement | null> }) 
   useLitLabels(grid, cell);
   if (!cell) return null;
 
-  const { left, top } = rectOf(rangeAt(cell));
+  const { left, top } = cellRect(cell);
 
   return (
     <div className="grid-hover" style={{ left, top }}>

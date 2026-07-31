@@ -9,6 +9,7 @@ import {
   SHEET_HEIGHT,
   SHEET_WIDTH,
   type Axis,
+  clampBetween,
   gapAtPoint,
   rectOf,
 } from "../core/geometry";
@@ -227,7 +228,7 @@ export function useDragging(
           : [HEADER_HEIGHT, rect.height, SHEET_HEIGHT];
 
       const along = alongAxis(event, axis);
-      const offset = Math.max(edge, Math.min(along - grabOffset.current, end - extent));
+      const offset = clampBetween(along - grabOffset.current, edge, end - extent);
       carried.current = true;
       // the block lands where its own near edge is nearest, so the ghost and the
       // line agree about what is being aimed at

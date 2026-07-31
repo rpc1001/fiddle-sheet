@@ -4,6 +4,8 @@ import type { CellValue } from "../formula/errors";
 import { evaluate } from "../formula/evaluate";
 import { type Node, ParseError, parse } from "../formula/parse";
 import { references } from "../formula/references";
+import { isFormula } from "../formula/scan";
+import { literalValue } from "../literal";
 import type { Selection } from "../selection";
 import { type Trace, createGraph } from "./graph";
 import { type Action, type Change, type Entry, createHistory } from "./history";
@@ -67,12 +69,6 @@ export type Sheet = {
   trace(key: CellKey): Trace;
 };
 
-function literalValue(raw: string): CellValue {
-  if (raw.trim() === "") return "";
-  const value = Number(raw);
-  return Number.isNaN(value) ? raw : value;
-}
-
 export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
   const cells = new Map<CellKey, Cell>();
   const listeners = new Map<CellKey, Set<Listener>>();
@@ -89,7 +85,7 @@ export function createSheet(initial: Iterable<[CellKey, string]> = []): Sheet {
   const readCell = (row: number, col: number): CellValue => getValue(cellKey(row, col));
 
   function compile(raw: string): Cell {
-    if (!raw.startsWith("=")) return { raw, formula: null, value: literalValue(raw) };
+    if (!isFormula(raw)) return { raw, formula: null, value: literalValue(raw) };
 
     try {
       return { raw, formula: parse(raw.slice(1)), value: 0 };

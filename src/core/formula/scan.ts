@@ -2,6 +2,12 @@ import { columnIndex, parseAddress } from "../address";
 import { ROWS } from "../geometry";
 import { type Range, rangeAt, rangeBetween } from "../range";
 
+// what separates a formula from a value. every reader of that rule asks here
+// rather than spelling out the sigil for itself.
+export function isFormula(text: string): boolean {
+  return text.startsWith("=");
+}
+
 // "B2" and "B7" -> B2:B7, "A" and "C" -> the whole of A to C. null when the two
 // sides are not the same kind of thing, or name a cell off the sheet.
 export function referenceRange(startText: string, endText: string): Range | null {
@@ -41,7 +47,7 @@ export function draftReferences(text: string): Range[] {
 const COMPLETE_VALUE = /([A-Za-z]\d+|\d|\))\s*$/;
 
 export function canTakeOperator(text: string): boolean {
-  return text.startsWith("=") && COMPLETE_VALUE.test(text);
+  return isFormula(text) && COMPLETE_VALUE.test(text);
 }
 
 // "=SUM(B2:B7" commits as "=SUM(B2:B7)". the closing bracket carries no meaning
@@ -51,7 +57,7 @@ export function canTakeOperator(text: string): boolean {
 // the bracket below. a letter followed by "(" is a function being called, not a
 // column, however unknown that function turns out to be.
 export function expandColumns(text: string): string {
-  if (!text.startsWith("=")) return text;
+  if (!isFormula(text)) return text;
 
   let out = "";
   let cut = 0;
@@ -70,7 +76,7 @@ export function expandColumns(text: string): string {
 }
 
 export function balanceBrackets(text: string): string {
-  if (!text.startsWith("=")) return text;
+  if (!isFormula(text)) return text;
 
   let depth = 0;
   for (const char of text) {

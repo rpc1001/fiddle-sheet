@@ -1,16 +1,16 @@
 import type { ClipboardEvent, KeyboardEvent, MouseEvent } from "react";
 import { type Address, cellKey } from "../core/address";
-import { clipText, copyClip, parseClip, pasteWrites, pastedRange } from "../core/clipboard";
-import { fillWrites } from "../core/entry";
+import { clipText, copyClip, parseClip, pasteWrites } from "../core/clipboard";
+import { clearWrites, fillWrites } from "../core/entry";
 import { COLS, clampAddress } from "../core/geometry";
 import { jumpTarget } from "../core/jump";
-import { cellsIn } from "../core/range";
 import {
   collapsed,
   columnSpan,
   moved,
   reachedTo,
   rowSpan,
+  selectionOver,
   selectionRange,
 } from "../core/selection";
 import { clipFor, dropClip, getClip, holdClip } from "../state/clipboard";
@@ -79,15 +79,10 @@ export function useKeys(surface: Surface): Keys {
     const clip = clipFor(text);
     const rows = clip ? clip.rows : parseClip(text);
     const into = selectionRange(getSelection());
-    const at = { row: into.top, col: into.left };
 
-    sheet.edit(pasteWrites(clip, rows, at), getSelection(), "paste");
-
-    const landed = pastedRange(at, rows.length, rows[0]?.length ?? 0);
-    setSelection({
-      anchor: { row: landed.top, col: landed.left },
-      focus: { row: landed.bottom, col: landed.right },
-    });
+    const paste = pasteWrites(clip, rows, { row: into.top, col: into.left });
+    sheet.edit(paste.writes, getSelection(), "paste");
+    setSelection(selectionOver(paste.landing));
 
     // the cells a cut came from are gone, so it has nothing left to say
     if (clip?.cut) dropClip();
@@ -136,12 +131,7 @@ export function useKeys(surface: Surface): Keys {
     } else if (event.key === "Enter") {
       openEditor(selection.focus);
     } else if (event.key === "Backspace" || event.key === "Delete") {
-      const cleared = [...cellsIn(selectionRange(selection))];
-      sheet.edit(
-        cleared.map((cell) => [cellKey(cell.row, cell.col), ""]),
-        selection,
-        "clear",
-      );
+      sheet.edit(clearWrites(selectionRange(selection)), selection, "clear");
     } else if (event.key === "Escape") {
       // one press puts down one thing, the most recent first. the fill is
       // already written, so dismissing its readings takes nothing back: that is

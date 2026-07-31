@@ -1,6 +1,6 @@
 import { type Address, type CellKey, cellKey } from "./address";
 import { offsetFormula } from "./formula/offset";
-import { COLS, ROWS } from "./geometry";
+import { COLS, ROWS, clampBetween } from "./geometry";
 import { type Range, cellsIn } from "./range";
 import type { Read } from "./sheet/store";
 
@@ -91,8 +91,8 @@ function splitRows(text: string): string[][] {
 // inside the sheet rather than truncated: losing the far edge of a paste is
 // worse than landing a row short of where it was aimed.
 export function pastedRange(target: Address, height: number, width: number): Range {
-  const top = Math.max(0, Math.min(target.row, ROWS - height));
-  const left = Math.max(0, Math.min(target.col, COLS - width));
+  const top = clampBetween(target.row, 0, ROWS - height);
+  const left = clampBetween(target.col, 0, COLS - width);
   return {
     top,
     left,
@@ -101,15 +101,15 @@ export function pastedRange(target: Address, height: number, width: number): Ran
   };
 }
 
-// the cells a paste writes. a clip of ours carries its formulas the distance it
-// moved; text from outside has no origin to have moved from and lands as typed.
-// a cut also blanks whatever it left behind, in the same list, so the whole move
-// is one edit and one undo.
-export function pasteWrites(
-  clip: Clip | null,
-  rows: string[][],
-  target: Address,
-): [CellKey, string][] {
+// the cells a paste writes, and the block it filled. the landing is returned
+// rather than left to the caller to work out again: a clip pushed back inside the
+// sheet does not land where it was aimed, and only this knows where it went.
+export type Paste = { writes: [CellKey, string][]; landing: Range };
+
+// a clip of ours carries its formulas the distance it moved; text from outside has
+// no origin to have moved from and lands as typed. a cut also blanks whatever it
+// left behind, in the same list, so the whole move is one edit and one undo.
+export function pasteWrites(clip: Clip | null, rows: string[][], target: Address): Paste {
   const landing = pastedRange(target, rows.length, rows[0]?.length ?? 0);
   const rowStep = landing.top - (clip?.origin.top ?? landing.top);
   const colStep = landing.left - (clip?.origin.left ?? landing.left);
@@ -133,5 +133,5 @@ export function pasteWrites(
     }
   }
 
-  return writes;
+  return { writes, landing };
 }

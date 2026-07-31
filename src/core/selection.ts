@@ -14,6 +14,15 @@ export function selectionRange(selection: Selection): Range {
   return rangeBetween(selection.anchor, selection.focus);
 }
 
+// a whole block selected, anchored at the corner a drag would have started from,
+// so the keyboard picks up where the block ends
+export function selectionOver(range: Range): Selection {
+  return {
+    anchor: { row: range.top, col: range.left },
+    focus: { row: range.bottom, col: range.right },
+  };
+}
+
 // a band of whole columns or whole rows is an ordinary selection stretched to
 // the far edge of the sheet, which is also what A:A means to the formula engine.
 // the anchor sits at the far end and the focus at the near one: the focus is

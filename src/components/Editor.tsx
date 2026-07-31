@@ -9,10 +9,10 @@ import {
 } from "react";
 import { cellKey } from "../core/address";
 import { spreadWrites } from "../core/entry";
-import { SHEET_WIDTH, clampAddress, rectOf } from "../core/geometry";
-import { rangeAt } from "../core/range";
+import { SHEET_WIDTH, cellRect, clampAddress } from "../core/geometry";
 import { selectionAt, selectionRange } from "../core/selection";
-import { asWritten } from "../core/formula/scan";
+import { asWritten, isFormula } from "../core/formula/scan";
+import { isNumericText } from "../core/literal";
 import { acceptSuggestion } from "../core/formula/suggest";
 import {
   type Editing,
@@ -46,14 +46,10 @@ export function Editor({
   return <Draft key={cellKey(row, col)} editing={editing} viewport={viewport} onDone={onDone} />;
 }
 
-function isNumeric(text: string): boolean {
-  return text !== "" && !Number.isNaN(Number(text));
-}
-
 // a formula or a number reads as mono, the same as the cell underneath, so
 // opening the editor does not reshape the text
 function isMonospaced(text: string): boolean {
-  return text.startsWith("=") || isNumeric(text);
+  return isFormula(text) || isNumericText(text);
 }
 
 // the second click of a double click says the first one was not browsing: the
@@ -188,7 +184,7 @@ function Draft({
     event.stopPropagation();
   }
 
-  const box = rectOf(rangeAt(cell));
+  const box = cellRect(cell);
   const view = viewportBox(viewport.current);
   const style = {
     left: box.left,
@@ -201,7 +197,7 @@ function Draft({
   } as CSSProperties;
 
   const shape = `${isMonospaced(text) ? " is-monospaced" : ""}${
-    isNumeric(text) ? " is-numeric" : ""
+    isNumericText(text) ? " is-numeric" : ""
   }`;
 
   return (

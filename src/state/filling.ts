@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { type Reading, fillReadings } from "../core/fill";
 import { type Range, sameRange } from "../core/range";
-import { type Selection, selectionRange } from "../core/selection";
+import { type Selection, selectionOver, selectionRange } from "../core/selection";
 import { getSelection, setSelection, subscribeSelection } from "./selection";
 import { sheet } from "./sheet";
 import { createValueStore } from "./valueStore";
@@ -56,10 +56,7 @@ export function applyFill(source: Range, extent: Range): void {
   const before = sheet.revision();
   sheet.edit(readings[0]!.writes, from, "fill");
 
-  setSelection({
-    anchor: { row: extent.top, col: extent.left },
-    focus: { row: extent.bottom, col: extent.right },
-  });
+  setSelection(selectionOver(extent));
 
   // a fill that wrote nothing has no action in history to revise, and selecting
   // what it covered is all it can honestly do

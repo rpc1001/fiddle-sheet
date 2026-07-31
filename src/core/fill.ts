@@ -1,5 +1,7 @@
 import { type Address, type CellKey, cellKey } from "./address";
 import { offsetFormula } from "./formula/offset";
+import { isFormula } from "./formula/scan";
+import { isNumericText } from "./literal";
 import type { Range } from "./range";
 import type { Read } from "./sheet/store";
 
@@ -152,12 +154,9 @@ function stepOf(texts: string[], soloStep: number): Step | null {
 // "12" is a number, and "item 12" is a name with a number on the end, which
 // counts the same way. a formula is neither: it is copied, never counted.
 function numberPart(text: string): { prefix: string; value: number } | null {
-  if (text.startsWith("=")) return null;
+  if (isFormula(text)) return null;
 
-  const trimmed = text.trim();
-  if (trimmed !== "" && !Number.isNaN(Number(trimmed))) {
-    return { prefix: "", value: Number(trimmed) };
-  }
+  if (isNumericText(text)) return { prefix: "", value: Number(text) };
 
   const match = /^(.*?)(-?\d+)$/.exec(text);
   return match ? { prefix: match[1]!, value: Number(match[2]) } : null;

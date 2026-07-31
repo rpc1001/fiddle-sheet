@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { cellKey } from "../core/address";
 import { bandOf } from "../core/geometry";
 import { type Doing, type List, hintsFor } from "../core/hints";
+import { isFormula } from "../core/formula/scan";
 import { isSingleCell } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { offered, useEditing } from "../state/editing";
@@ -51,7 +52,7 @@ export function StatusBar() {
     shown.suggestion?.kind !== "functions" ? "none" : shown.taking ? "taking" : "showing";
 
   const doing: Doing = editing
-    ? { kind: "editing", formula: editing.text.startsWith("="), list }
+    ? { kind: "editing", formula: isFormula(editing.text), list }
     : {
         kind: "selecting",
         multi: !isSingleCell(range),
@@ -60,7 +61,7 @@ export function StatusBar() {
       };
 
   const hints = hintsFor(doing);
-  const formula = behind.startsWith("=");
+  const formula = isFormula(behind);
   const single = isSingleCell(range);
   const band = bandOf(range);
 

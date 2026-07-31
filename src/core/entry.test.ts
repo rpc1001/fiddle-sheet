@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type CellKey, cellKey, parseAddress } from "./address";
-import { fillWrites, spreadWrites } from "./entry";
+import { clearWrites, fillWrites, spreadWrites } from "./entry";
 import type { Range } from "./range";
 
 function sheetOf(cells: Record<string, string>) {
@@ -101,5 +101,16 @@ describe("fillWrites from a single cell", () => {
   it("has nothing above the first row to fill from", () => {
     expect(fillWrites(read, rangeOf("A1"), "down")).toEqual([]);
     expect(fillWrites(read, rangeOf("A1"), "right")).toEqual([]);
+  });
+});
+
+describe("clearWrites", () => {
+  it("empties every cell of the block, filled or not", () => {
+    expect(written(clearWrites(rangeOf("A1:B2")))).toEqual({
+      A1: "",
+      B1: "",
+      A2: "",
+      B2: "",
+    });
   });
 });

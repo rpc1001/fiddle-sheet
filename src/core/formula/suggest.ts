@@ -1,6 +1,6 @@
 import type { Range } from "../range";
 import { FUNCTIONS, type SheetFunction, functionsStartingWith } from "./functions";
-import { draftReferences } from "./scan";
+import { draftReferences, isFormula } from "./scan";
 
 export type Suggestion =
   // the functions a name could still become. typed says whether the list is
@@ -27,7 +27,7 @@ function partialName(text: string): string | null {
 }
 
 export function suggest(text: string): Suggestion {
-  if (!text.startsWith("=")) return null;
+  if (!isFormula(text)) return null;
 
   const partial = partialName(text);
   if (partial) {

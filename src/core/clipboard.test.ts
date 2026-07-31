@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type CellKey, cellKey, parseAddress } from "./address";
 import { type Clip, clipText, copyClip, parseClip, pasteWrites, pastedRange } from "./clipboard";
+import { ROWS } from "./geometry";
 import type { Range } from "./range";
 
 function sheetOf(cells: Record<string, string>) {
@@ -100,21 +101,21 @@ describe("pastedRange", () => {
 describe("pasteWrites", () => {
   it("carries a formula the distance the cell moved", () => {
     const clip = clipOf({ A1: "=B1*2" }, "A1");
-    expect(written(pasteWrites(clip, clip.rows, { row: 1, col: 0 }))).toEqual({ A2: "=B2*2" });
+    expect(written(pasteWrites(clip, clip.rows, { row: 1, col: 0 }).writes)).toEqual({ A2: "=B2*2" });
   });
 
   it("leaves a pinned side where it is", () => {
     const clip = clipOf({ A1: "=$B$1*2" }, "A1");
-    expect(written(pasteWrites(clip, clip.rows, { row: 1, col: 0 }))).toEqual({ A2: "=$B$1*2" });
+    expect(written(pasteWrites(clip, clip.rows, { row: 1, col: 0 }).writes)).toEqual({ A2: "=$B$1*2" });
   });
 
   it("takes text from outside as typed, with nothing to offset it by", () => {
-    expect(written(pasteWrites(null, [["=B1*2"]], { row: 1, col: 0 }))).toEqual({ A2: "=B1*2" });
+    expect(written(pasteWrites(null, [["=B1*2"]], { row: 1, col: 0 }).writes)).toEqual({ A2: "=B1*2" });
   });
 
   it("blanks what a cut left behind", () => {
     const clip = clipOf({ A1: "1", A2: "2" }, "A1:A2", true);
-    expect(written(pasteWrites(clip, clip.rows, { row: 0, col: 1 }))).toEqual({
+    expect(written(pasteWrites(clip, clip.rows, { row: 0, col: 1 }).writes)).toEqual({
       B1: "1",
       B2: "2",
       A1: "",
@@ -124,10 +125,16 @@ describe("pasteWrites", () => {
 
   it("does not blank the part of a cut it overlaps", () => {
     const clip = clipOf({ A1: "1", A2: "2" }, "A1:A2", true);
-    expect(written(pasteWrites(clip, clip.rows, { row: 1, col: 0 }))).toEqual({
+    expect(written(pasteWrites(clip, clip.rows, { row: 1, col: 0 }).writes)).toEqual({
       A2: "1",
       A3: "2",
       A1: "",
     });
+  });
+
+  it("says where it landed, which is not where it was aimed at the far edge", () => {
+    const clip = clipOf({ A1: "1", A2: "2" }, "A1:A2");
+    const aimed = { row: ROWS - 1, col: 0 };
+    expect(pasteWrites(clip, clip.rows, aimed).landing).toEqual(rangeOf("A99:A100"));
   });
 });

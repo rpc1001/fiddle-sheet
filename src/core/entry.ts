@@ -18,6 +18,14 @@ export function spreadWrites(text: string, from: Address, range: Range): [CellKe
   return writes;
 }
 
+// every cell of a block emptied. one call, so clearing is one undoable action
+// however many cells it covers.
+export function clearWrites(range: Range): [CellKey, string][] {
+  const writes: [CellKey, string][] = [];
+  for (const cell of cellsIn(range)) writes.push([cellKey(cell.row, cell.col), ""]);
+  return writes;
+}
+
 // the selection's first row taken down it, or its first column taken across.
 // this is the drag of the fill handle without the drag, so it asks the same
 // function what the cells mean, and it asks for the copy: a keyed fill states

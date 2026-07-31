@@ -15,12 +15,18 @@ export const SHEET_HEIGHT = HEADER_HEIGHT + ROWS * ROW_HEIGHT;
 
 export type Rect = { left: number; top: number; width: number; height: number };
 
-function clamp(value: number, limit: number): number {
-  return Math.max(0, Math.min(limit - 1, value));
+// keeps a value inside a span. min wins when the span is empty, which is what
+// puts a block too big for its space against the near edge rather than off it.
+export function clampBetween(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(value, max));
+}
+
+function clampIndex(value: number, count: number): number {
+  return clampBetween(value, 0, count - 1);
 }
 
 export function clampAddress(row: number, col: number): Address {
-  return { row: clamp(row, ROWS), col: clamp(col, COLS) };
+  return { row: clampIndex(row, ROWS), col: clampIndex(col, COLS) };
 }
 
 // x and y are relative to the top left of the grid, header and gutter included.
@@ -28,8 +34,8 @@ export function clampAddress(row: number, col: number): Address {
 // keeps extending instead of stopping.
 export function cellAtPoint(x: number, y: number): Address {
   return {
-    row: clamp(Math.floor((y - HEADER_HEIGHT) / ROW_HEIGHT), ROWS),
-    col: clamp(Math.floor((x - GUTTER_WIDTH) / COL_WIDTH), COLS),
+    row: clampIndex(Math.floor((y - HEADER_HEIGHT) / ROW_HEIGHT), ROWS),
+    col: clampIndex(Math.floor((x - GUTTER_WIDTH) / COL_WIDTH), COLS),
   };
 }
 
@@ -46,9 +52,9 @@ export type Axis = "column" | "row";
 export type Band = Axis | null;
 
 // a selection stretched to the far edge of the sheet is a band of whole columns
-// or whole rows, and it is named by the bands rather than by the corners it
-// happens to have: C:C, not C1:C100. select all covers both, and reading it as
-// columns is the one that names every cell in it.
+// or whole rows, named by the bands it covers rather than by its corners: C, not
+// C1:C100. select all covers both, and reading it as columns is the one that
+// names every cell in it.
 export function bandOf(range: Range): Band {
   if (coversEveryRow(range)) return "column";
   if (coversEveryColumn(range)) return "row";
@@ -85,7 +91,7 @@ export function gapOffset(gap: number, axis: Axis): number {
 // rather than where the band it happens to be over begins
 export function gapAtPoint(along: number, axis: Axis): number {
   const { start, size, count } = track(axis);
-  return Math.max(0, Math.min(count, Math.round((along - start) / size)));
+  return clampBetween(Math.round((along - start) / size), 0, count);
 }
 
 export type Viewport = { scrollLeft: number; scrollTop: number; width: number; height: number };
@@ -130,12 +136,12 @@ export function fitsAbove(rect: Rect, height: number, gap: number, view: Viewpor
 // unless that would hang it off one edge of the window or the other
 export function keepAcross(x: number, width: number, gap: number, view: Viewport): number {
   const last = view.scrollLeft + view.width - gap - width;
-  return Math.max(view.scrollLeft + GUTTER_WIDTH, Math.min(x, last));
+  return clampBetween(x, view.scrollLeft + GUTTER_WIDTH, last);
 }
 
 export function keepDown(y: number, height: number, gap: number, view: Viewport): number {
   const last = view.scrollTop + view.height - gap - height;
-  return Math.max(view.scrollTop + HEADER_HEIGHT, Math.min(y, last));
+  return clampBetween(y, view.scrollTop + HEADER_HEIGHT, last);
 }
 
 // the part of a rect that is on screen, and the only part a panel beside it can
@@ -160,6 +166,12 @@ export function rectOf(range: Range): Rect {
     width: (range.right - range.left + 1) * COL_WIDTH,
     height: (range.bottom - range.top + 1) * ROW_HEIGHT,
   };
+}
+
+// the box of one cell. the range is spelled out rather than taken from rangeAt,
+// which would make this file import a module that imports it back.
+export function cellRect(cell: Address): Rect {
+  return rectOf({ top: cell.row, left: cell.col, bottom: cell.row, right: cell.col });
 }
 
 export type Inset = { left: number; top: number; right: number; bottom: number };

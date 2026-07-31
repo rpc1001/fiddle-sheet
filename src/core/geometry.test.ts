@@ -10,6 +10,7 @@ import {
   SHEET_WIDTH,
   bandOf,
   cellAtPoint,
+  cellRect,
   gapAtPoint,
   gapOffset,
   fitsAbove,
@@ -28,7 +29,7 @@ import {
 import { rangeBetween } from "./range";
 
 const view = { scrollLeft: 0, scrollTop: 0, width: 500, height: 300 };
-const cellRect = (row: number, col: number) => rectOf(rangeBetween({ row, col }, { row, col }));
+const boxOf = (row: number, col: number) => cellRect({ row, col });
 
 describe("cellAtPoint", () => {
   it("finds the first cell just inside the header and gutter", () => {
@@ -105,35 +106,35 @@ describe("rectOf", () => {
 
 describe("scrollToShow", () => {
   it("leaves the scroll alone when the cell is already visible", () => {
-    expect(scrollToShow(cellRect(1, 1), view)).toEqual(view);
+    expect(scrollToShow(boxOf(1, 1), view)).toEqual(view);
   });
 
   it("scrolls down just enough to reveal a cell below the fold", () => {
-    const rect = cellRect(20, 0);
+    const rect = boxOf(20, 0);
     const next = scrollToShow(rect, view);
     expect(next.scrollTop).toBe(rect.top + rect.height - view.height);
   });
 
   it("scrolls right just enough to reveal a cell past the edge", () => {
-    const rect = cellRect(0, 20);
+    const rect = boxOf(0, 20);
     const next = scrollToShow(rect, view);
     expect(next.scrollLeft).toBe(rect.left + rect.width - view.width);
   });
 
   it("scrolls back up so the cell clears the sticky header", () => {
-    const rect = cellRect(5, 0);
+    const rect = boxOf(5, 0);
     const next = scrollToShow(rect, { ...view, scrollTop: 1000 });
     expect(next.scrollTop).toBe(rect.top - HEADER_HEIGHT);
   });
 
   it("scrolls back left so the cell clears the sticky gutter", () => {
-    const rect = cellRect(0, 5);
+    const rect = boxOf(0, 5);
     const next = scrollToShow(rect, { ...view, scrollLeft: 1000 });
     expect(next.scrollLeft).toBe(rect.left - GUTTER_WIDTH);
   });
 
   it("puts the first cell at the origin", () => {
-    const next = scrollToShow(cellRect(0, 0), { ...view, scrollLeft: 400, scrollTop: 400 });
+    const next = scrollToShow(boxOf(0, 0), { ...view, scrollLeft: 400, scrollTop: 400 });
     expect(next).toMatchObject({ scrollLeft: 0, scrollTop: 0 });
   });
 });
@@ -142,7 +143,7 @@ describe("visiblePart", () => {
   const column = rectOf(rangeBetween({ row: 0, col: 1 }, { row: ROWS - 1, col: 1 }));
 
   it("leaves a rect that is already on screen alone", () => {
-    expect(visiblePart(cellRect(1, 1), view)).toEqual(cellRect(1, 1));
+    expect(visiblePart(boxOf(1, 1), view)).toEqual(boxOf(1, 1));
   });
 
   it("clips a whole column to the rows in the window", () => {
@@ -167,36 +168,36 @@ describe("visiblePart", () => {
 
 describe("fitsRight, fitsLeft and fitsBelow", () => {
   it("accepts a panel with room on the far side of the gutter", () => {
-    expect(fitsLeft(cellRect(0, 6), 200, 18, view)).toBe(true);
+    expect(fitsLeft(boxOf(0, 6), 200, 18, view)).toBe(true);
   });
 
   it("refuses a panel that would slide under the gutter", () => {
-    expect(fitsLeft(cellRect(0, 1), 200, 18, view)).toBe(false);
+    expect(fitsLeft(boxOf(0, 1), 200, 18, view)).toBe(false);
   });
 
   it("accepts a panel with room beside the cell", () => {
-    expect(fitsRight(cellRect(0, 0), 200, 18, view)).toBe(true);
-    expect(fitsBelow(cellRect(0, 0), 150, 18, view)).toBe(true);
+    expect(fitsRight(boxOf(0, 0), 200, 18, view)).toBe(true);
+    expect(fitsBelow(boxOf(0, 0), 150, 18, view)).toBe(true);
   });
 
   it("refuses a panel that would land outside the window, not outside the sheet", () => {
-    expect(fitsRight(cellRect(0, 4), 200, 18, view)).toBe(false);
-    expect(fitsBelow(cellRect(8, 0), 150, 18, view)).toBe(false);
+    expect(fitsRight(boxOf(0, 4), 200, 18, view)).toBe(false);
+    expect(fitsBelow(boxOf(8, 0), 150, 18, view)).toBe(false);
   });
 
   it("refuses a panel that would slide under the header", () => {
-    expect(fitsAbove(cellRect(0, 0), 150, 18, view)).toBe(false);
-    expect(fitsAbove(cellRect(1, 0), 150, 18, view)).toBe(false);
+    expect(fitsAbove(boxOf(0, 0), 150, 18, view)).toBe(false);
+    expect(fitsAbove(boxOf(1, 0), 150, 18, view)).toBe(false);
   });
 
   it("accepts a panel with room above the cell", () => {
-    expect(fitsAbove(cellRect(7, 0), 150, 18, view)).toBe(true);
+    expect(fitsAbove(boxOf(7, 0), 150, 18, view)).toBe(true);
   });
 
   it("measures from the scrolled window, so scrolling makes room", () => {
     const scrolled = { ...view, scrollLeft: 400, scrollTop: 400 };
-    expect(fitsRight(cellRect(0, 4), 200, 18, scrolled)).toBe(true);
-    expect(fitsBelow(cellRect(8, 0), 150, 18, scrolled)).toBe(true);
+    expect(fitsRight(boxOf(0, 4), 200, 18, scrolled)).toBe(true);
+    expect(fitsBelow(boxOf(8, 0), 150, 18, scrolled)).toBe(true);
   });
 });
 

@@ -1,5 +1,5 @@
-import { gapOffset, rectOf } from "../core/geometry";
-import { bandLabel, rangeAt } from "../core/range";
+import { cellRect, gapOffset, rectOf } from "../core/geometry";
+import { bandLabel } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { useMoving } from "../state/moving";
 import { useQuoting } from "../state/quoting";
@@ -53,7 +53,7 @@ export function QuoteGhost() {
   const quote = useQuoting();
   if (!quote) return null;
 
-  const target = quote.onto ? rectOf(rangeAt(quote.onto)) : null;
+  const target = quote.onto ? cellRect(quote.onto) : null;
 
   return (
     <>

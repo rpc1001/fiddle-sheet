@@ -1,6 +1,6 @@
 import { columnIndex, columnLabel, parseAddress, rowLabel } from "../address";
 import { COLS, ROWS } from "../geometry";
-import { CHUNK } from "./scan";
+import { CHUNK, isFormula } from "./scan";
 
 // one end of a reference, taken apart far enough to move it: "$B7" is column B
 // pinned against a fill, row 7 free to travel. row is null for a whole-column
@@ -40,7 +40,7 @@ function sideText(side: Side): string {
 // returned untouched: only inside a formula does a letter name a column, and
 // rewriting a note that mentions A1 would be a lie about the sheet.
 export function rewriteReferences(text: string, move: (side: Side) => Side): string {
-  if (!text.startsWith("=")) return text;
+  if (!isFormula(text)) return text;
 
   let out = "";
   let cut = 0;

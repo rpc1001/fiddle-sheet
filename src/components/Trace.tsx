@@ -3,7 +3,7 @@ import { type Address, type CellKey, addressOf, cellKey } from "../core/address"
 import { blocks } from "../core/blocks";
 import { isError } from "../core/formula/errors";
 import { draftReferences } from "../core/formula/scan";
-import { rectOf } from "../core/geometry";
+import { cellRect, rectOf } from "../core/geometry";
 import { type Range, isSingleCell, rangeAt, rangeLabel } from "../core/range";
 import { selectionRange } from "../core/selection";
 import { useEditing } from "../state/editing";
@@ -33,7 +33,7 @@ function blameMark(at: CellKey): Mark | null {
 }
 
 function boxOf(key: CellKey): CSSProperties {
-  return rectOf(rangeAt(addressOf(key)));
+  return cellRect(addressOf(key));
 }
 
 // cells at the same distance in the same direction are one shape, so a traced

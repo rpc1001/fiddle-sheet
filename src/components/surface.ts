@@ -4,11 +4,10 @@ import {
   type Axis,
   type Zone,
   cellAtPoint,
-  rectOf,
+  cellRect,
   scrollToShow,
   zoneAtPoint,
 } from "../core/geometry";
-import { rangeAt } from "../core/range";
 import { getSelection } from "../state/selection";
 import { viewportBox } from "./viewport";
 
@@ -85,7 +84,7 @@ export function useSurface(
     if (!view) return;
 
     const focus = getSelection().focus;
-    const next = scrollToShow(rectOf(rangeAt(focus)), viewportBox(view));
+    const next = scrollToShow(cellRect(focus), viewportBox(view));
 
     view.scrollLeft = next.scrollLeft;
     view.scrollTop = next.scrollTop;
