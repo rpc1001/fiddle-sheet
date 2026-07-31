@@ -1,4 +1,5 @@
 import {
+  type ClipboardEvent,
   Fragment,
   type KeyboardEvent,
   type MouseEvent,
@@ -8,6 +9,7 @@ import {
   useRef,
 } from "react";
 import { type Address, type CellKey, cellKey, columnLabel } from "../core/address";
+import { clipText, copyClip, parseClip, pasteWrites, pastedRange } from "../core/clipboard";
 import { fillExtent } from "../core/fill";
 import { acceptsReference, insertReference } from "../core/formula/insert";
 import {
@@ -37,6 +39,7 @@ import {
   sameCell,
   selectionRange,
 } from "../core/selection";
+import { clipFor, dropClip, holdClip } from "../state/clipboard";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
 import { applyFill, clearOffer, getFilling, setFilling } from "../state/filling";
 import { getHover, setHover } from "../state/hover";
@@ -371,6 +374,44 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     startEditing(cell, sheet.getRaw(cellKey(cell.row, cell.col)));
   }
 
+  // the browser's own copy, cut and paste rather than a chord: they fire from
+  // the real shortcut on every platform, they carry the system clipboard with
+  // them, and they are what lets a range cross into another spreadsheet.
+  function onCopy(event: ClipboardEvent<HTMLDivElement>, cut: boolean): void {
+    if (getEditing()) return;
+    event.preventDefault();
+
+    const clip = copyClip(sheet.getRaw, selectionRange(getSelection()), cut);
+    event.clipboardData.setData("text/plain", clipText(clip));
+    holdClip(clip);
+  }
+
+  // a cut writes nothing until it lands: until then there is a way back, and
+  // the cells are still worth reading
+  function onPaste(event: ClipboardEvent<HTMLDivElement>): void {
+    if (getEditing()) return;
+    event.preventDefault();
+
+    const text = event.clipboardData.getData("text/plain");
+    if (text === "") return;
+
+    const clip = clipFor(text);
+    const rows = clip ? clip.rows : parseClip(text);
+    const into = selectionRange(getSelection());
+    const at = { row: into.top, col: into.left };
+
+    sheet.edit(pasteWrites(clip, rows, at), getSelection());
+
+    const landed = pastedRange(at, rows.length, rows[0]?.length ?? 0);
+    setSelection({
+      anchor: { row: landed.top, col: landed.left },
+      focus: { row: landed.bottom, col: landed.right },
+    });
+
+    // the cells a cut came from are gone, so it has nothing left to say
+    if (clip?.cut) dropClip();
+  }
+
   function onDoubleClick(event: MouseEvent<HTMLDivElement>): void {
     if (getEditing()) return;
     openEditor(cellUnder(event));
@@ -399,6 +440,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
       // the fill is already written, so this dismisses the readings and nothing
       // else. taking it back is undo, the same as for every other edit.
       clearOffer();
+      dropClip();
     } else if (isChord(event, "z")) {
       // shift+z is the mac habit for redo, ctrl+y the windows one
       if (event.shiftKey) redo();
@@ -430,6 +472,9 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         onPointerLeave={() => setHover(null)}
         onDoubleClick={onDoubleClick}
         onKeyDown={onKeyDown}
+        onCopy={(event) => onCopy(event, false)}
+        onCut={(event) => onCopy(event, true)}
+        onPaste={onPaste}
       >
         <div className="grid-corner" />
         {columns.map((col) => (

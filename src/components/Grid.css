@@ -276,6 +276,29 @@
   pointer-events: none;
 }
 
+/* held on the clipboard. dashed like the fill extent, because both are a block
+   the sheet is considering rather than one it has acted on, and in ink rather
+   than accent, because the accent is where you are and this is where you were. */
+.grid-clip {
+  position: absolute;
+  border: 1.5px dashed var(--ink-42);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  animation: clip-taken var(--track-ms) var(--ease-track) both;
+}
+
+/* a cut is already spoken for, so it reads as leaving rather than as a copy */
+.grid-clip.is-cut {
+  border-color: var(--ink-30);
+  background: rgb(var(--ink-rgb) / 0.04);
+}
+
+@keyframes clip-taken {
+  from {
+    opacity: 0;
+  }
+}
+
 /* the fill has landed and can still be read another way. the selection says so
    by holding the outline it had while it was being dragged, so the offer in the
    lens and the cells it is about are visibly the same thing. */

@@ -3,6 +3,7 @@ import type { Address } from "../core/address";
 import { coversEveryColumn, coversEveryRow, insetOf, switchesAxis } from "../core/geometry";
 import { type Range, isSingleCell, sameSize } from "../core/range";
 import { sameCell, selectionRange } from "../core/selection";
+import { useClip } from "../state/clipboard";
 import { useEditingCell } from "../state/editing";
 import { useFilling, useOffer } from "../state/filling";
 import { useSelection } from "../state/selection";
@@ -30,6 +31,7 @@ export function SelectionOverlay() {
   const editing = handedOver(range, useEditingCell());
   const filling = useFilling();
   const filled = useOffer() !== null;
+  const clip = useClip();
   const previous = useRef(range);
   const motion = motionFrom(previous.current, range);
 
@@ -49,6 +51,12 @@ export function SelectionOverlay() {
           own box rather than by stretching the selection, because the selection
           is the thing being filled from and has to stay where it is to say so. */}
       {filling && <div className="grid-fill-extent" style={insetOf(filling)} />}
+      {/* what is on the clipboard, still where it was taken from. it outlives
+          the selection moving away, which is the whole point of it: the answer
+          to "what am I about to paste" has to be on the sheet, not in memory. */}
+      {clip && (
+        <div className={`grid-clip${clip.cut ? " is-cut" : ""}`} style={insetOf(clip.origin)} />
+      )}
       <div
         className={`grid-selection${wholeColumns ? " is-capped-top" : ""}${
           wholeRows ? " is-capped-left" : ""
