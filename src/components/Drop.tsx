@@ -21,21 +21,27 @@ export function DropLine() {
 
   return (
     <>
-      <div
-        className={column ? "grid-ghost" : "grid-ghost is-row"}
-        style={
-          column
-            ? {
-                left: carry.offset,
-                width: (range.right - range.left + 1) * COL_WIDTH,
-              }
-            : {
-                top: carry.offset,
-                height: (range.bottom - range.top + 1) * ROW_HEIGHT,
-              }
-        }
-      >
-        <div className="grid-ghost-label">{label}</div>
+      {/* the ghost is held against the edge the header and the gutter hold, so it
+          rides in a track of its own the way the selection's rails do */}
+      <div className="grid-ghost-track">
+        <div className={column ? "grid-ghost-rail" : "grid-ghost-rail is-row"}>
+          <div
+            className={column ? "grid-ghost" : "grid-ghost is-row"}
+            style={
+              column
+                ? {
+                    left: carry.offset,
+                    width: (range.right - range.left + 1) * COL_WIDTH,
+                  }
+                : {
+                    top: carry.offset,
+                    height: (range.bottom - range.top + 1) * ROW_HEIGHT,
+                  }
+            }
+          >
+            <div className="grid-ghost-label">{label}</div>
+          </div>
+        </div>
       </div>
       <div
         className={column ? "grid-drop" : "grid-drop is-row"}

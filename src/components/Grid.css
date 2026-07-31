@@ -433,13 +433,38 @@
    because the bands have not moved yet. the glow a selected header wears on one
    edge is turned inward and run round the whole outline. no fill, so the sheet it
    is being aimed across stays readable underneath. */
+/* the ghost hangs off the header, and the header stays where it is while the
+   sheet scrolls under it, so the ghost has to as well. the rails answer the same
+   question the same way: a sticky element can only travel inside its containing
+   block, so it is given a track the full size of the sheet to travel in. */
+.grid-ghost-track {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* only as far down as the fade below reaches. a box to the foot of the sheet
+   would be three thousand pixels of nothing. */
+.grid-ghost-rail {
+  position: sticky;
+  top: 0;
+  height: calc(var(--header-h) + var(--row-h) * 6);
+}
+
+/* turned ninety degrees: it sticks to the edge the gutter holds instead, and
+   reaches out of it rather than down from the header */
+.grid-ghost-rail.is-row {
+  top: auto;
+  left: 0;
+  width: calc(var(--gutter-w) + var(--col-w) * 3);
+  height: 100%;
+}
+
 .grid-ghost {
   position: absolute;
   top: 0;
-  z-index: 3;
-  /* only as far down as the fade below reaches. a box to the foot of the sheet
-     would be three thousand pixels of nothing. */
-  height: calc(var(--header-h) + var(--row-h) * 6);
+  height: 100%;
   pointer-events: none;
   border: 2px solid var(--ink-42);
   border-radius: var(--radius-lg);
@@ -454,11 +479,12 @@
   );
 }
 
-/* the same skeleton turned ninety degrees: it reaches out of the gutter and
-   fades off to the right instead of down */
+/* the same skeleton turned ninety degrees: it fades off to the right instead of
+   down. its length is written inline, so only the edges it pins have to be undone.
+   the width comes from the rail, which is the thing holding it out of the gutter. */
 .grid-ghost.is-row {
   left: 0;
-  width: calc(var(--gutter-w) + var(--col-w) * 3);
+  width: 100%;
   mask-image: linear-gradient(
     to right,
     #000 calc(var(--gutter-w) + var(--col-w)),
