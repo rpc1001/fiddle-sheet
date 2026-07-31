@@ -42,8 +42,12 @@ export function SelectionOverlay() {
   });
 
   const inset = insetOf(range);
-  const wholeColumns = coversEveryRow(range);
-  const wholeRows = coversEveryColumn(range);
+  // a lid on the header says "these columns, all the way down", which is worth
+  // saying about C and D and says nothing about all of them. the whole sheet is
+  // not a band of anything, so it is drawn as what it is: every cell selected.
+  const everything = coversEveryRow(range) && coversEveryColumn(range);
+  const wholeColumns = coversEveryRow(range) && !everything;
+  const wholeRows = coversEveryColumn(range) && !everything;
 
   return (
     <>
