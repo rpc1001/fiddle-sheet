@@ -398,13 +398,15 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
       >
         <div className="grid-corner" />
         {columns.map((col) => (
-          <div key={col} className="grid-header">
+          <div key={col} className="grid-header" data-col={col}>
             {columnLabel(col)}
           </div>
         ))}
         {rows.map((row) => (
           <Fragment key={row}>
-            <div className="grid-gutter">{row + 1}</div>
+            <div className="grid-gutter" data-row={row}>
+              {row + 1}
+            </div>
             {columns.map((col) => (
               <Cell key={col} row={row} col={col} />
             ))}
@@ -412,7 +414,7 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         ))}
         <TraceOverlay />
         <DropLine />
-        <HoverRing />
+        <HoverRing grid={gridRef} />
         <SelectionOverlay />
         <Lens viewport={viewport} />
         <Editor viewport={viewport} onDone={focusGrid} />

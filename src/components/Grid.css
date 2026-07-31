@@ -42,6 +42,18 @@
   border-bottom: 1px solid var(--rule-row);
 }
 
+.grid-header,
+.grid-gutter {
+  transition: color var(--track-ms) var(--ease-track);
+}
+
+/* the pointer is over one cell, and its two labels say which one. the ring alone
+   answers where the pointer is; these answer where that is in the sheet. */
+.grid-header.is-lit,
+.grid-gutter.is-lit {
+  color: var(--ink);
+}
+
 .grid-cell {
   display: flex;
   align-items: center;
@@ -65,12 +77,33 @@
   position: absolute;
   width: var(--col-w);
   height: var(--row-h);
-  border: 1.5px solid var(--edge-faint);
-  border-radius: var(--radius-md);
   pointer-events: none;
   transition-property: left, top;
   transition-duration: var(--track-ms);
   transition-timing-function: var(--ease-track);
+}
+
+/* the ring is a child of the box that glides, not the box itself: it is
+   remounted on each new cell to replay the landing, and remounting the box would
+   lose the position it is gliding from. */
+.grid-hover-face {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--edge-faint);
+  border-radius: var(--radius-md);
+  /* the cell lifted off the paper rather than drawn on it. the shadow falls
+     outside the ring, so nothing is ever painted over the text inside it. */
+  box-shadow: 0 1px 3px rgb(var(--ink-rgb) / 0.06);
+  animation: hover-land var(--track-ms) var(--ease-track) both;
+}
+
+/* it presses onto the cell over the same window it travels, so the ring reaches
+   full size where it stops rather than after it */
+@keyframes hover-land {
+  from {
+    transform: scale(0.96);
+    opacity: 0.5;
+  }
 }
 
 .grid-selection {
