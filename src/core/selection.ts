@@ -27,6 +27,13 @@ export function rowSpan(anchorRow: number, focusRow: number): Selection {
   return { anchor: { row: anchorRow, col: COLS - 1 }, focus: { row: focusRow, col: 0 } };
 }
 
+// the selection down to the one cell the keyboard is on. the focus is what it
+// keeps, not the anchor: the focus is where the next arrow starts from, so
+// collapsing to it is the only version that leaves you where you were.
+export function collapsed(selection: Selection): Selection {
+  return selectionAt(selection.focus);
+}
+
 export function sameCell(one: Address, two: Address): boolean {
   return one.row === two.row && one.col === two.col;
 }
@@ -40,6 +47,11 @@ export function moved(
   extend: boolean,
 ): Selection {
   const from = selection.focus;
-  const focus = clampAddress(from.row + rowStep, from.col + colStep);
+  return reachedTo(selection, clampAddress(from.row + rowStep, from.col + colStep), extend);
+}
+
+// the same choice for a focus that was worked out some other way than by
+// stepping: a jump to the end of a run, a row's first column, a page down
+export function reachedTo(selection: Selection, focus: Address, extend: boolean): Selection {
   return extend ? { anchor: selection.anchor, focus } : selectionAt(focus);
 }

@@ -12,6 +12,7 @@ import { type Address, type CellKey, cellKey, columnLabel } from "../core/addres
 import { clipText, copyClip, parseClip, pasteWrites, pastedRange } from "../core/clipboard";
 import { fillExtent } from "../core/fill";
 import { acceptsReference, insertReference } from "../core/formula/insert";
+import { jumpTarget } from "../core/jump";
 import {
   COLS,
   GUTTER_WIDTH,
@@ -24,6 +25,7 @@ import {
   coversEveryColumn,
   coversEveryRow,
   cellAtPoint,
+  clampAddress,
   gapAtPoint,
   rectOf,
   scrollToShow,
@@ -33,15 +35,17 @@ import { type Range, cellsIn, rangeAt, sameRange } from "../core/range";
 import { moveColumns, moveRows } from "../core/sheet/move";
 import {
   type Selection,
+  collapsed,
   columnSpan,
   moved,
+  reachedTo,
   rowSpan,
   sameCell,
   selectionRange,
 } from "../core/selection";
-import { clipFor, dropClip, holdClip } from "../state/clipboard";
+import { clipFor, dropClip, getClip, holdClip } from "../state/clipboard";
 import { getEditing, setInsertedDraft, startEditing } from "../state/editing";
-import { applyFill, clearOffer, getFilling, setFilling } from "../state/filling";
+import { applyFill, clearOffer, getFilling, getOffer, setFilling } from "../state/filling";
 import { getHover, setHover } from "../state/hover";
 import { getMoving, setMoving } from "../state/moving";
 import { getSelection, setSelection } from "../state/selection";
@@ -417,14 +421,30 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
     openEditor(cellUnder(event));
   }
 
+  function reach(focus: Address, extend: boolean): void {
+    setSelection(reachedTo(getSelection(), focus, extend));
+    revealFocus();
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
     if (getEditing()) return;
     const selection = getSelection();
+    const focus = selection.focus;
     const step = STEPS[event.key];
+    const jump = event.metaKey || event.ctrlKey;
 
     if (step) {
-      setSelection(moved(selection, step[0], step[1], event.shiftKey));
-      revealFocus();
+      // held, the arrow covers the run rather than a cell of it. it is the one
+      // way to cross a hundred rows without a hundred presses, and the run is
+      // the unit that means something: a block of data, then the gap after it.
+      reach(
+        jump
+          ? jumpTarget(sheet.getRaw, focus, step[0], step[1])
+          : clampAddress(focus.row + step[0], focus.col + step[1]),
+        event.shiftKey,
+      );
+    } else if (isChord(event, "a")) {
+      setSelection(columnSpan(0, COLS - 1));
     } else if (event.key === "Tab") {
       setSelection(moved(selection, 0, event.shiftKey ? -1 : 1, false));
       revealFocus();
@@ -437,10 +457,12 @@ export function Grid({ gridRef }: { gridRef: RefObject<HTMLDivElement | null> })
         selection,
       );
     } else if (event.key === "Escape") {
-      // the fill is already written, so this dismisses the readings and nothing
-      // else. taking it back is undo, the same as for every other edit.
-      clearOffer();
-      dropClip();
+      // one press puts down one thing, the most recent first. the fill is
+      // already written, so dismissing its readings takes nothing back: that is
+      // undo, the same as for every other edit.
+      if (getOffer()) clearOffer();
+      else if (getClip()) dropClip();
+      else setSelection(collapsed(selection));
     } else if (isChord(event, "z")) {
       // shift+z is the mac habit for redo, ctrl+y the windows one
       if (event.shiftKey) redo();
