@@ -21,23 +21,15 @@ npm test
 
 ### Grid state
 
-The sheet is a `Map<CellKey, Cell>` in `src/core/sheet/store.ts`. `CellKey` is a single simple
-integer, `row * COLS + col.` An empty cell is an absent key instead of a a stored blank so
-fresh sheet actually hold nothing and clearing a range shrinks the map. 
+The sheet is a `Map<CellKey, Cell>`. `CellKey` is a single simple
+integer, `row * COLS + col.` An empty cell is an absent key instead of a stored blank so a fresh sheet actually holds nothing and clearing a range shrinks the map. 
 
 A cell is `{ raw, formula, value }`. Text you typed, the parsed syntax tree (null for a
 literal), and the result. The tree is built once when the text is written instead of on each
-recalculation. A cell deep in a chain that recomputes multiple times only is parsed once. Keeping the
-tree around is also what lets anything describe a formula rather than run it, which is where the
-lens gets `=B2*C2` reads as `12 x 4`.
+recalculation.
 
-There is one way to write: `sheet.edit(writes, selection, action)`. Typing, pasting,
+There is one way to write. `sheet.edit(writes, selection, action)`. Typing, pasting,
 clearing , filling, moving a row/col are all one call. This makes undo always accurate since its just one call and group.
-
-A change is symmetric, so undo and redo are the same code path with one argument different:
-`apply(changes, "before")` and `apply(changes, "after")`. `revise()` rolls the last action back and
-records a replacement against the original before values, so reading a fill one way and then the
-other leaves one entry in history rather than a guess plus a correction.
 
 ### Selection
 
@@ -53,10 +45,6 @@ indices into pixel distances from each side of the sheet, and they go straight i
 `left/top/right/bottom`. So the browser is told where each of the four sides is, separately, which
 is what lets the box animate one edge and hold another still. 
 
-A whole column selection is not a mode. It is an ordinary selection stretched to the far edge of the
-sheet, which is also what `A:A` means to the engine, so nothing downstream needs a second path. The
-anchor sits at the far end and the focus at the near one, so clicking header C leaves the keyboard
-on C1 rather than C100.
 
 ### Formulas: parsing
 
