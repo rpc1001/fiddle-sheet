@@ -100,17 +100,11 @@ so anything still waiting when the queue drains is waiting on itself, and gets `
 
 ### Trade-offs
 
-The grid is fixed at 100 by 26 instead of an infinite canvas. That is the brief's scope, and taking
-it means the geometry is constants: row height, column width, the size of the whole sheet. Hit
-testing is then arithmetic on a pointer position rather than a lookup, and the selection box can be
-positioned from the sheet's four edges because the sheet has a known size. An infinite canvas makes
-all of that dynamic. The cost is that 26 columns is hard capped, since a column label is one letter.
-
 Every cell renders. All 2,600 of them are real divs, no windowing. I built windowing first and then
 deleted it. At this size it buys nothing and it costs complexity and possible delays on rendering.Past ten thousand or so rows I would put windowing back.
 
 A range reference is one graph edge per cell, so `=SUM(A:A)` makes a hundred of them. Correct and
-fast here, wrong at a million rows, where the fix is range nodes with interval overlap. Definitely not worth building for a sheet this size.
+fast but nor scalable. Definitely not worth building for a sheet this size.
 
 Moving a column or a row rewrites the whole sheet. Every cell is walked to remap the formulas that
 point at what moved, so it is O(sheet) per move instead of O(affected). It is nothing at 2,600
@@ -128,8 +122,6 @@ it per column means a lookup everywhere that is currently arithmetic.
 
 ### What I would do with more time
 
-**Make it hold a real sheet.** Everything here is honest at 2,600 cells and gives out somewhere past
-a few thousand. 
 
 **Let people theme it.** The whole surface already runs off one set of custom properties. Colour,
 type, radii, shadows, and the easings and durations too, which means motion is as themeable as
